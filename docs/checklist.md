@@ -36,7 +36,7 @@
 - Les 5000 trajectoires simulent **κ seul**, paramètres (α, β) fixés au fit central — **pas** un re-bootstrap.
 - L'éventail des trajectoires s'élargit en cône avec l'horizon (variance croît avec h).
 - 🚩 La fonction B ressemble à la fonction bootstrap de A → confusion incertitude de paramètres / incertitude de projection, ruine la comparaison demandée en rapport.
-
+- 🚩 IC de A.3 plus étroits que ceux de B = bug certain
 ## C — VAP et primes
 - VAP[B] < VAP[A] toujours (la rente temporaire ampute la queue longue, la plus incertaine).
 - VAP décroît quand t augmente ; VAP[A] plus sensible à t que VAP[B] (effet duration).

@@ -90,3 +90,16 @@ aléatoire doit être identique d'un run à l'autre.
 ## Compact Instructions
 En cas de résumé de conversation : préserver les valeurs numériques de
 contrôle obtenues, les chemins des RDS produits, et la liste des TODO.
+
+## Notes de référence
+- `docs/STMOMO_NOTES.md` — chaîne d'appels StMoMo (quoi appeler, avec quels arguments).
+- `docs/BOOTSTRAP_NOTES.md` — fondements du bootstrap semi-paramétrique
+  (Brouhns-Denuit-Van Keilegom 2005 ; Brouhns-Denuit-Vermunt 2002 ;
+  Haberman-Renshaw 2009). Sert à : justifier le choix méthodologique,
+  fixer les arguments de bootstrap(), et fournir des ORDRES DE GRANDEUR
+  de contrôle post-bootstrap.
+  PÉRIMÈTRE STRICT : cette note documente des alternatives (bootstrap
+  paramétrique, bootstrap résiduel, bootstrap par génération, modèle
+  relationnel de Brass, modèles APC). AUCUNE ne doit être implémentée.
+  Le projet ne demande que Lee-Carter + bootstrap semi-paramétrique.
+  Ces alternatives sont matière de RAPPORT et de DÉFENSE, pas de code.

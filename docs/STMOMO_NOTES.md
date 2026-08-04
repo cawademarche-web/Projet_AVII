@@ -63,8 +63,15 @@ LCsim <- simulate(LCfit_h, nsim = 5000, h = <horizon>)   # α, β FIXÉS au fit 
 
 | Appel | Ce qui varie | Section |
 |---|---|---|
-| `simulate(LCboot, h = ...)` | κ futur **+** α, β ré-estimés | A2 (paramètres) |
-| `simulate(LCfit, nsim, h = ...)` | κ futur seul, α/β fixés | **B** (projection) |
+| `simulate(LCboot, h = ...)` | κ futur **+** α, β ré-estimés **+ dérive et σ du RWD ré-estimées** | A2 (paramètres) |
+| `simulate(LCfit, nsim, h = ...)` | κ futur seul, α/β **et** dérive/σ fixés au fit central | **B** (projection) |
+
+⚠️ **Correction** : la ligne A2 ci-dessus portait « κ futur + α, β ré-estimés », ce qui
+est incomplet. `simulate(LCboot, ...)` ré-estime AUSSI la dérive et la volatilité de la
+marche aléatoire sur la série κ*ₜ de chaque réplication — BDVK05 §4.2 : *spécification
+gelée, paramètres relâchés*. La section A.3 capture donc **trois** sources d'incertitude
+(α/β, paramètres de la série temporelle, aléa futur de κ) contre **une** en section B.
+Détail et références : `docs/BOOTSTRAP_NOTES.md` §3.
 
 La vignette compare explicitement les deux jeux d'IC à 95 % sur un même graphe
 (taux à 40, 60, 80 ans) — c'est le graphe à reproduire pour la comparaison du rapport.

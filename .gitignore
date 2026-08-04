@@ -1,1 +1,5 @@
 /.claude
+# Arrays de taux simulés du bootstrap (~80-170 Mo à nBoot = 5000).
+# Tous les autres RDS de resultats/ restent versionnés : ils portent le
+# contrat d'interface entre sections.
+resultats/LCsimPU_*.rds
