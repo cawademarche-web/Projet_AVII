@@ -18,7 +18,7 @@ Numérotation alignée sur le brief officiel : A.1 (MLE), A.2 (discussion), A.3 
 | A.2 (discussion : espérance de vie, âge médian/IQR, expansion-rectangularisation) | `scripts/01_donnees_taux.R` (indicateurs) | Table de survie périodique ℓ_x = exp(−Σ_{k<x} µ_k) ; e_x ≈ Σ_{k≥1} ₖp_x + ½ (curtate + ½) ; quantiles de l'âge au décès par interpolation de ℓ_x | `resultats/01_indicateurs.rds` ; 1947 → 2023 : e₀ 58,87 → 79,45 (H) et 63,96 → 84,23 (F) ; e₆₅ 11,97 → 18,40 (H) et 13,51 → 21,57 (F) ; médiane 67,85 → 82,43 (H) et 72,95 → 87,08 (F) ; IQR 27,94 → 15,79 (H) et 22,88 → 12,70 (F) ; sensibilité troncature 2023 (bornes 100→103) : e₆₅ 18,388 → 18,398 (H), 21,545 → 21,578 (F) ; 4 figures `fig_A2_courbes_survie.png`, `fig_A2_courbe_deces.png`, `fig_A2_esperance_vie.png`, `fig_A2_mediane_iqr.png` | Rédaction de la discussion (expansion / rectangularisation) = rapport |
 | A.3 (Lee-Carter : fit, résidus, projection, bootstrap N=5000) | `scripts/02_leecarter_stmomo.R` | LC Poisson via StMoMo `fit(lc(link="log"), Dxt=, Ext=, ages=, years=)` — expositions **centrales** (validées par le contrôle croisé d'A.1 contre le Mx publié) ; poids w_{x,t} = 0 sur les cellules ETR = 0 ; projection `forecast(h=50, kt.method="mrwd", jumpchoice="fit")` ; bootstrap `type="semiparametric", deathType="observed"` | voir les sous-sections ci-dessous | voir TODO globaux |
 | B (5000 trajectoires κ, IC, comparaison avec bootstrap) | `scripts/03_simulation_kappa.R` | — | — | — |
-| C (VAP rentes [A]/[B], primes) | `scripts/04_pricing_vap.R` | — | — | — |
+| C (VAP rentes [A]/[B], primes) | `scripts/04_pricing_vap.R` | — | — | **Sensibilité prudentielle COVID** : rejouer VAP et primes sur la calibration 1970-2019 (β₆₅·d̂ = −0,01995 H / −0,01918 F contre −0,01823 / −0,01727 en cas de base) et chiffrer l'écart ; à propager en D sur le SCR |
 | D (BOF, SCR 2022/2023, sensibilité) | `scripts/05_solvabilite_scr.R` | — | — | — |
 
 ## Section A.3 — détail (chiffres recopiés de la console du run `n_boot = 5000`)
@@ -37,94 +37,115 @@ explicitement pour être comptée et documentée. 12 avis émis au bloc 2a = 2 w
 
 ### A.3.i — grille de 18 variantes par sexe (36 fits, **tous convergés**)
 
-| sexe | ages | période | R²(κ~t) | d̂ | σ̂(Δκ) | ρ₁(Δκ) | déviance | BIC | RMSE commune |
-|---|---|---|---|---|---|---|---|---|---|
-| h | 0:102 | 1947-2023 | 0,9530 | −1,9739 | 2,8022 | −0,1424 | 25305 | 82342 | 0,13314 |
-| h | 0:102 | 1947-2019 | 0,9448 | −2,1205 | 2,3916 | −0,2140 | 23804 | 78043 | 0,13216 |
-| h | 0:102 | 1970-2023 | 0,9851 | −2,1934 | 2,6353 | −0,1462 | 9337 | 49447 | 0,13335 |
-| h | 0:102 | 1970-2019 | 0,9926 | −2,4101 | 2,0463 | −0,3361 | 8209 | 45515 | 0,13253 |
-| h | 0:102 | 1980-2023 | 0,9769 | −2,2418 | 2,7366 | −0,1402 | 6458 | 39141 | 0,13098 |
-| h | 0:102 | 1980-2019 | 0,9945 | −2,5124 | 2,0512 | −0,3836 | 5500 | 35375 | 0,13029 |
-| h | 50:102 | 1947-2023 | 0,9094 | −0,5600 | 1,3701 | −0,2960 | 8514 | 41847 | 0,13275 |
-| h | 50:102 | 1947-2019 | 0,8945 | −0,6037 | 1,2855 | −0,3409 | 7809 | 39355 | 0,13183 |
-| h | 50:102 | 1970-2023 | 0,9824 | −0,7974 | 1,1213 | −0,2135 | 5148 | 28973 | 0,13326 |
-| h | 50:102 | 1970-2019 | 0,9901 | −0,8810 | 0,8983 | −0,3525 | 4395 | 26430 | 0,13244 |
-| h | 50:102 | 1980-2023 | 0,9746 | −0,8326 | 1,1731 | −0,2275 | 3783 | 23367 | 0,13086 |
-| h | 50:102 | 1980-2019 | 0,9934 | −0,9418 | 0,9010 | −0,4307 | 3146 | 20940 | 0,13018 |
-| h | 60:102 | 1947-2023 | 0,8994 | −0,4077 | 1,1249 | −0,3299 | 6015 | 33095 | 0,13254 |
-| h | 60:102 | 1947-2019 | 0,8836 | −0,4444 | 1,0705 | −0,3754 | 5578 | 31176 | 0,13166 |
-| **h** | **60:102** | **1970-2023** | **0,9799** | **−0,6023** | **0,8924** | **−0,2189** | **3864** | **23321** | **0,13312** |
-| h | 60:102 | 1970-2019 | 0,9902 | −0,6732 | 0,7296 | −0,3585 | 3414 | 21388 | 0,13229 |
-| h | 60:102 | 1980-2023 | 0,9676 | −0,6097 | 0,9243 | −0,2255 | 2862 | 18865 | 0,13075 |
-| h | 60:102 | 1980-2019 | 0,9908 | −0,6993 | 0,7294 | −0,4160 | 2465 | 16984 | 0,13007 |
-| f | 0:102 | 1947-2023 | 0,9826 | −2,2679 | 3,3054 | −0,3488 | 16883 | 72074 | 0,07401 |
-| f | 0:102 | 1947-2019 | 0,9819 | −2,4241 | 3,0074 | −0,4292 | 15687 | 68208 | 0,07363 |
-| f | 0:102 | 1970-2023 | 0,9825 | −2,0481 | 2,8116 | −0,3216 | 7954 | 46577 | 0,06999 |
-| f | 0:102 | 1970-2019 | 0,9941 | −2,2272 | 2,3891 | −0,4625 | 6944 | 42891 | 0,06958 |
-| f | 0:102 | 1980-2023 | 0,9687 | −2,0158 | 2,9455 | −0,3395 | 6059 | 37532 | 0,06854 |
-| f | 0:102 | 1980-2019 | 0,9906 | −2,2334 | 2,4617 | −0,5082 | 5126 | 33920 | 0,06798 |
-| f | 50:102 | 1947-2023 | 0,9735 | −0,7222 | 1,3994 | −0,4330 | 7602 | 41569 | 0,07423 |
-| f | 50:102 | 1947-2019 | 0,9712 | −0,7696 | 1,3166 | −0,4991 | 6793 | 38977 | 0,07414 |
-| f | 50:102 | 1970-2023 | 0,9815 | −0,8247 | 1,2133 | −0,3380 | 4807 | 29095 | 0,07003 |
-| f | 50:102 | 1970-2019 | 0,9932 | −0,9006 | 1,0456 | −0,4733 | 4059 | 26562 | 0,06965 |
-| f | 50:102 | 1980-2023 | 0,9675 | −0,8134 | 1,2520 | −0,3551 | 3769 | 23702 | 0,06853 |
-| f | 50:102 | 1980-2019 | 0,9903 | −0,9059 | 1,0528 | −0,5262 | 3082 | 21229 | 0,06799 |
-| f | 60:102 | 1947-2023 | 0,9708 | −0,5559 | 1,1494 | −0,4405 | 6215 | 34361 | 0,07435 |
-| f | 60:102 | 1947-2019 | 0,9685 | −0,5976 | 1,0849 | −0,5088 | 5515 | 32158 | 0,07433 |
-| **f** | **60:102** | **1970-2023** | **0,9796** | **−0,6490** | **0,9990** | **−0,3398** | **3989** | **24251** | **0,06991** |
-| f | 60:102 | 1970-2019 | 0,9927 | −0,7183 | 0,8663 | −0,4798 | 3410 | 22168 | 0,06956 |
-| f | 60:102 | 1980-2023 | 0,9643 | −0,6371 | 1,0255 | −0,3578 | 3067 | 19722 | 0,06836 |
-| f | 60:102 | 1980-2019 | 0,9896 | −0,7225 | 0,8697 | −0,5351 | 2555 | 17704 | 0,06786 |
+⚠️ **d̂ n'est PAS comparable d'une plage d'âges à l'autre.** Sous la contrainte
+d'identification Σβ_x = 1, l'échelle de κ dépend du nombre d'âges de la plage : 103 âges
+pour 0:102 contre 43 pour 60:102. Le rapport ~3,6 entre les d̂ de ces deux plages est un
+**pur artefact d'identification**, pas une différence de dynamique. La quantité invariante
+est **β₆₅ · d̂**, taux annuel d'amélioration de ln µ₆₅, et c'est elle qui pilote la VAP
+d'une rente à 65 ans. Les comparaisons **à plage d'âges fixée** (2019 vs 2023, H vs F)
+restent valides sur d̂.
 
-En **gras** : la variante de travail retenue, **PROVISOIRE**.
+| sexe | ages | période | R²(κ~t) | d̂ | β₆₅ | **β₆₅·d̂** | σ̂(Δκ) | ρ₁(Δκ) | déviance | BIC | RMSE commune |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| h | 0:102 | 1947-2023 | 0,9530 | −1,9739 | 0,007786 | −0,01537 | 2,8022 | −0,1424 | 25305 | 82342 | 0,13314 |
+| h | 0:102 | 1947-2019 | 0,9448 | −2,1205 | 0,007708 | −0,01634 | 2,3916 | −0,2140 | 23804 | 78043 | 0,13216 |
+| h | 0:102 | 1970-2023 | 0,9851 | −2,1934 | 0,008273 | −0,01815 | 2,6353 | −0,1462 | 9337 | 49447 | 0,13335 |
+| h | 0:102 | 1970-2019 | 0,9926 | −2,4101 | 0,008246 | −0,01987 | 2,0463 | −0,3361 | 8209 | 45515 | 0,13253 |
+| h | 0:102 | 1980-2023 | 0,9769 | −2,2418 | 0,008227 | −0,01844 | 2,7366 | −0,1402 | 6458 | 39141 | 0,13098 |
+| h | 0:102 | 1980-2019 | 0,9945 | −2,5124 | 0,008180 | −0,02055 | 2,0512 | −0,3836 | 5500 | 35375 | 0,13029 |
+| h | 50:102 | 1947-2023 | 0,9094 | −0,5600 | 0,024264 | −0,01359 | 1,3701 | −0,2960 | 8514 | 41847 | 0,13275 |
+| h | 50:102 | 1947-2019 | 0,8945 | −0,6037 | 0,024168 | −0,01459 | 1,2855 | −0,3409 | 7809 | 39355 | 0,13183 |
+| h | 50:102 | 1970-2023 | 0,9824 | −0,7974 | 0,022954 | −0,01830 | 1,1213 | −0,2135 | 5148 | 28973 | 0,13326 |
+| h | 50:102 | 1970-2019 | 0,9901 | −0,8810 | 0,022775 | −0,02007 | 0,8983 | −0,3525 | 4395 | 26430 | 0,13244 |
+| h | 50:102 | 1980-2023 | 0,9746 | −0,8326 | 0,022135 | −0,01843 | 1,1731 | −0,2275 | 3783 | 23367 | 0,13086 |
+| h | 50:102 | 1980-2019 | 0,9934 | −0,9418 | 0,021808 | −0,02054 | 0,9010 | −0,4307 | 3146 | 20940 | 0,13018 |
+| h | 60:102 | 1947-2023 | 0,8994 | −0,4077 | 0,032192 | −0,01312 | 1,1249 | −0,3299 | 6015 | 33095 | 0,13254 |
+| h | 60:102 | 1947-2019 | 0,8836 | −0,4444 | 0,031743 | −0,01411 | 1,0705 | −0,3754 | 5578 | 31176 | 0,13166 |
+| **h** | **60:102** | **1970-2023** | **0,9799** | **−0,6023** | **0,030263** | **−0,01823** | **0,8924** | **−0,2189** | **3864** | **23321** | **0,13312** |
+| h | 60:102 | 1970-2019 | 0,9902 | −0,6732 | 0,029640 | −0,01995 | 0,7296 | −0,3585 | 3414 | 21388 | 0,13229 |
+| h | 60:102 | 1980-2023 | 0,9676 | −0,6097 | 0,029897 | −0,01823 | 0,9243 | −0,2255 | 2862 | 18865 | 0,13075 |
+| h | 60:102 | 1980-2019 | 0,9908 | −0,6993 | 0,029008 | −0,02029 | 0,7294 | −0,4160 | 2465 | 16984 | 0,13007 |
+| f | 0:102 | 1947-2023 | 0,9826 | −2,2679 | 0,007843 | −0,01779 | 3,3054 | −0,3488 | 16883 | 72074 | 0,07401 |
+| f | 0:102 | 1947-2019 | 0,9819 | −2,4241 | 0,007881 | −0,01910 | 3,0074 | −0,4292 | 15687 | 68208 | 0,07363 |
+| f | 0:102 | 1970-2023 | 0,9825 | −2,0481 | 0,008498 | −0,01740 | 2,8116 | −0,3216 | 7954 | 46577 | 0,06999 |
+| f | 0:102 | 1970-2019 | 0,9941 | −2,2272 | 0,008649 | −0,01926 | 2,3891 | −0,4625 | 6944 | 42891 | 0,06958 |
+| f | 0:102 | 1980-2023 | 0,9687 | −2,0158 | 0,007664 | −0,01545 | 2,9455 | −0,3395 | 6059 | 37532 | 0,06854 |
+| f | 0:102 | 1980-2019 | 0,9906 | −2,2334 | 0,007802 | −0,01742 | 2,4617 | −0,5082 | 5126 | 33920 | 0,06798 |
+| f | 50:102 | 1947-2023 | 0,9735 | −0,7222 | 0,022965 | −0,01659 | 1,3994 | −0,4330 | 7602 | 41569 | 0,07423 |
+| f | 50:102 | 1947-2019 | 0,9712 | −0,7696 | 0,023276 | −0,01791 | 1,3166 | −0,4991 | 6793 | 38977 | 0,07414 |
+| f | 50:102 | 1970-2023 | 0,9815 | −0,8247 | 0,021073 | −0,01738 | 1,2133 | −0,3380 | 4807 | 29095 | 0,07003 |
+| f | 50:102 | 1970-2019 | 0,9932 | −0,9006 | 0,021390 | −0,01926 | 1,0456 | −0,4733 | 4059 | 26562 | 0,06965 |
+| f | 50:102 | 1980-2023 | 0,9675 | −0,8134 | 0,018957 | −0,01542 | 1,2520 | −0,3551 | 3769 | 23702 | 0,06853 |
+| f | 50:102 | 1980-2019 | 0,9903 | −0,9059 | 0,019218 | −0,01741 | 1,0528 | −0,5262 | 3082 | 21229 | 0,06799 |
+| f | 60:102 | 1947-2023 | 0,9708 | −0,5559 | 0,029448 | −0,01637 | 1,1494 | −0,4405 | 6215 | 34361 | 0,07435 |
+| f | 60:102 | 1947-2019 | 0,9685 | −0,5976 | 0,029664 | −0,01773 | 1,0849 | −0,5088 | 5515 | 32158 | 0,07433 |
+| **f** | **60:102** | **1970-2023** | **0,9796** | **−0,6490** | **0,026609** | **−0,01727** | **0,9990** | **−0,3398** | **3989** | **24251** | **0,06991** |
+| f | 60:102 | 1970-2019 | 0,9927 | −0,7183 | 0,026707 | −0,01918 | 0,8663 | −0,4798 | 3410 | 22168 | 0,06956 |
+| f | 60:102 | 1980-2023 | 0,9643 | −0,6371 | 0,024012 | −0,01530 | 1,0255 | −0,3578 | 3067 | 19722 | 0,06836 |
+| f | 60:102 | 1980-2019 | 0,9896 | −0,7225 | 0,023956 | −0,01731 | 0,8697 | −0,5351 | 2555 | 17704 | 0,06786 |
+
+En **gras** : le cas de base retenu.
 
 Lectures à porter au rapport :
+- **Vérification de l'artefact d'échelle.** Période 1970-2023, les trois plages d'âges :
+  d̂ = −2,1934 / −0,7974 / −0,6023 (hommes), soit un rapport 3,6 ; mais
+  β₆₅·d̂ = −0,01815 / −0,01830 / −0,01823, **amplitude relative 0,86 %**. Chez les femmes :
+  −0,01740 / −0,01738 / −0,01727, **0,78 %**. Les trois plages décrivent donc la **même**
+  dynamique d'amélioration à 65 ans : ~1,8 %/an chez les hommes, ~1,7 %/an chez les femmes.
+  Le choix de plage d'âges ne change pratiquement rien à ce qui pilote la VAP.
 - **Déviance et BIC ne sont pas comparables entre variantes** : le jeu de données change
   (nobs va de 2 322 à 7 931 cellules). Ils ne discriminent rien ici.
-- La **RMSE sur fenêtre commune** (60-102 × 1980-2019), elle, est comparable — mais elle
-  ne discrimine quasiment pas non plus : 0,130 à 0,133 chez les hommes, 0,068 à 0,074 chez
-  les femmes, soit ~2 % d'écart entre les extrêmes. Le choix de plage/période ne se joue
-  donc **pas** sur la qualité d'ajustement in-sample.
+- La **RMSE sur fenêtre commune** (60-102 × 1980-2019) est comparable, mais ne discrimine
+  quasiment pas non plus : 0,130 à 0,133 (H), 0,068 à 0,074 (F), ~2 % d'écart entre les
+  extrêmes. Le choix ne se joue **pas** sur la qualité d'ajustement in-sample.
 - Le critère qui discrimine est la **linéarité de κ** : R² passe de 0,8994 (60:102,
   1947-2023) à 0,9799 (60:102, 1970-2023). Exclure l'après-guerre immédiat change
   réellement quelque chose ; restreindre encore à 1980 ne gagne plus rien (0,9676).
-- 🚩 **À remonter** : ρ₁(Δκ) est **systématiquement négatif**, de −0,14 à −0,54, et le plus
-  fortement chez les femmes. La marche aléatoire avec dérive suppose des accroissements
-  Δκ i.i.d. ; une autocorrélation d'ordre 1 de −0,3 à −0,5 contredit cette hypothèse.
-  Ce n'est pas un bug de code (la valeur est cohérente sur les 36 fits) mais une limite du
-  modèle de projection, à énoncer dans le rapport. Elle s'aggrave quand on exclut le COVID.
+- **ρ₁(Δκ) systématiquement négatif** (−0,14 à −0,54) : ce n'est **pas** une violation de
+  l'hypothèse de projection, c'est la signature attendue de l'erreur d'estimation sur κ̂ —
+  voir TODO globaux.
 
-### A.3.i — effet des années COVID sur la dérive d̂
-Écart relatif de d̂ entre fin 2019 et fin 2023, par plage × début :
-**+6,15 % à +12,82 %** selon la variante. Détail : le signe est toujours positif, donc
-inclure 2020-2021 **réduit systématiquement l'amplitude de la dérive** (mortalité en
-hausse ces deux années ⇒ κ remonte ⇒ tendance baissière atténuée). L'effet croît quand la
-période est courte (1980 : +9,7 à +12,8 %) et quand la plage d'âges est haute (60:102).
-Pour la variante de travail (60:102, début 1970) : d̂ = −0,6732 (fin 2019) vs −0,6023
-(fin 2023), soit **+10,52 %**. Ce n'est pas négligeable : d̂ pilote directement les VAP
-et le SCR.
+### A.3.i — effet des années COVID (comparaison à plage d'âges constante, donc valide sur d̂)
+Écart relatif de d̂ entre fin 2019 et fin 2023, par plage × début : **+6,15 % à +12,82 %**.
+Le signe est toujours positif : inclure 2020-2021 **réduit systématiquement l'amplitude de
+la dérive** (surmortalité ⇒ κ remonte ⇒ tendance baissière atténuée). L'effet croît quand
+la période est courte (1980 : +9,7 à +12,8 %) et quand la plage d'âges est haute.
+
+Pour le cas de base (60:102, début 1970), sur la quantité qui pilote réellement la VAP :
+
+| | β₆₅·d̂ fin 2019 | β₆₅·d̂ fin 2023 | écart | (écart sur d̂ seul) |
+|---|---|---|---|---|
+| Hommes | −0,01995 | −0,01823 | **+8,64 %** | +10,52 % |
+| Femmes | −0,01918 | −0,01727 | **+9,98 %** | +9,64 % |
+
+**Arbitrage tranché : cas de base = 1970-2023** (données complètes). Inclure 2020-2021
+réduit |β₆₅·d̂| de ~9 %, donc **réduit les VAP** : c'est le sens **anti-prudentiel** pour
+un assureur de rentes, dont le risque est de sous-estimer l'amélioration future de la
+mortalité. La variante **1970-2019 devient une sensibilité prudentielle**, à propager en
+sections C et D avec son effet chiffré sur VAP et SCR (voir TODO section C).
 
 ### A.3.i — profils séquentiels à rebours (Denuit-Goderniaux / HR09 §3.10)
-`figures/fig_A3_profil_kappa_sequentiel.png`
+`figures/fig_A3_profil_kappa_sequentiel.png` — panneau de droite tracé en **β₆₅·d̂**, pas
+en d̂ : superposer trois plages d'âges sur l'échelle de κ inviterait au contre-sens.
 
-| série | R² max | atteint en t₀ | amplitude de d̂ sur t₀ = 1947-1990 | sur tout le profil |
+| série | R² max | atteint en t₀ | amplitude de β₆₅·d̂ sur t₀ = 1947-1990 | sur tout le profil |
 |---|---|---|---|---|
-| h 0:102 | 0,9839 | 1970 | 31,8 % (−2,5511 à −1,8561) | 31,4 % |
-| h 50:102 | 0,9827 | 1969 | 49,1 % (−0,8810 à −0,5241) | 48,6 % |
-| h 60:102 | 0,9804 | 1969 | 50,9 % (−0,6502 à −0,3762) | 50,6 % |
-| f 0:102 | 0,9843 | 1967 | 19,3 % (−2,5050 à −2,0654) | 38,4 % |
-| f 50:102 | 0,9831 | 1967 | 25,3 % (−0,8879 à −0,6881) | 41,4 % |
-| f 60:102 | 0,9813 | 1967 | 26,4 % (−0,6889 à −0,5266) | 44,0 % |
+| h 0:102 | 0,9839 | 1970 | 31,8 % (−0,01986 à −0,01445) | 31,4 % |
+| h 50:102 | 0,9827 | 1969 | 49,1 % (−0,02138 à −0,01272) | 48,6 % |
+| h 60:102 | 0,9804 | 1969 | 50,9 % (−0,02093 à −0,01211) | 50,6 % |
+| f 0:102 | 0,9843 | 1967 | 19,3 % (−0,01965 à −0,01620) | 38,4 % |
+| f 50:102 | 0,9831 | 1967 | 25,3 % (−0,02039 à −0,01580) | 41,4 % |
+| f 60:102 | 0,9813 | 1967 | 26,4 % (−0,02029 à −0,01551) | 44,0 % |
 
-- Le **maximum de R² tombe en t₀ = 1967-1970** pour les six séries : c'est l'argument
-  chiffré en faveur d'un début de calibration autour de 1970, indépendant du sexe et de la
-  plage d'âges.
-- 🚩 **À remonter** : chez les **hommes**, restreindre le profil aux années de départ utiles
-  (t₀ ≤ 1990) ne réduit **pas** l'amplitude de d̂ (50,9 % contre 50,6 % pour 60:102).
-  L'instabilité de la dérive n'y est donc pas un artefact de fin de profil : elle est
-  réelle sur toute la plage. Chez les **femmes**, au contraire, elle tombe de 44,0 % à
-  26,4 % — là c'était bien en partie la queue du profil. Le choix de t₀ est donc un
-  arbitrage plus lourd pour les hommes que pour les femmes.
+- Le **maximum de R² tombe en t₀ = 1967-1970** pour les six séries : argument chiffré en
+  faveur d'un début de calibration autour de 1970, indépendant du sexe et de la plage.
+- **Recalcul sur la quantité invariante effectué** : les amplitudes relatives sont
+  **inchangées** par rapport au calcul sur d̂ seul. C'est attendu — β₆₅ est une constante à
+  l'intérieur d'un profil donné, donc la multiplication ne modifie pas une amplitude
+  relative. L'écart entre sexes n'était donc **pas** un artefact d'échelle : il porte sur
+  des séries comparées **à plage d'âges fixée**. Le constat subsiste après vérification :
+  chez les hommes, restreindre aux t₀ ≤ 1990 ne réduit pas l'amplitude (50,9 % vs 50,6 %
+  pour 60:102), alors que chez les femmes elle tombe de 44,0 % à 26,4 %.
 
 ### A.3.ii — paramètres du fit de travail (60:102 × 1970-2023)
 Contraintes d'identification **vérifiées numériquement** : Σβ_x = 1 (H **et** F) ;
@@ -207,9 +228,9 @@ s'élargissant avec l'horizon, conforme).
 
 | # | Obtenu | Étalon | Verdict |
 |---|---|---|---|
-| i — biais moyenne/ponctuel | **−0,06 % (H)**, **−0,07 % (F)** | 0,1 à 1,0 % (BDVK05) | ⚠️ **en dessous** de l'étalon, pas au-dessus : biais plus faible que celui de BDVK05. À n = 200 on avait ±0,15 % — l'écart résiduel était donc de l'erreur de Monte-Carlo, absorbée à 5000. Pas un bug. |
+| i — biais moyenne/ponctuel | **−0,06 % (H)**, **−0,07 % (F)** | 0,1 à 1,0 % (BDVK05) | ✅ L'étalon est un **plafond** (« au-delà du pourcent, cherche le bug »), pas une cible. Un biais dix fois plus petit est un bon résultat. À n = 200 on avait ±0,15 % : le passage à 5000 a absorbé l'erreur de Monte-Carlo, ce qui **valide le protocole en deux temps**. |
 | ii — largeur relative IC 95 % de e₆₅ | **9,83 % (H)**, **9,12 % (F)** | quelques % à ~15 % (BDVK05, mais à **90 %** et sur a₆₅) | ✅ dans la fourchette |
-| iii — asymétrie H/F | rapport **1,08** | hommes systématiquement plus larges (BDVK05) | ✅ sens conforme, mais **très atténué** : BDVK05 obtient 15,7 % / 3,9 % ≈ 4,0. Notre écart H/F est quasi nul, à commenter. |
+| iii — asymétrie H/F | rapport **1,08** ; σ̂(Δκ) = **0,8924 (H)** vs **0,9990 (F)** | hommes systématiquement plus larges (BDVK05) | ✅ sens conforme, et l'ampleur s'explique par nos propres estimations : BDVK05 attribue l'écart aux IC plus larges sur la projection des κ masculins, or **ici c'est la volatilité féminine qui est supérieure** (0,9990 > 0,8924). Le ratio proche de 1 est donc cohérent avec les données autrichiennes, il n'a pas à ressembler au cas belge. |
 | iv — dispersion paramétrique | voir tableau ci-dessous | β̂ nettement plus dispersé | ✅ confirmé, **mais seulement après normalisation** |
 
 Diagnostic (iv), écart-type bootstrap moyen — **brut** puis **normalisé par l'amplitude
@@ -229,6 +250,21 @@ Dispersion de β̂ par âge (écart-type bootstrap) : 0,00054 (65 ans) → 0,000
 0,00467 (101) → **0,00637 (102)**, soit ×12 entre 65 et 102 ans chez les hommes ; 0,00057 →
 0,00032 → 0,00226 → 0,00298 chez les femmes. Conforme à l'attendu « plus dispersé aux âges
 extrêmes, où l'exposition est faible ». Figure `fig_A3_bootstrap_parametres.png`.
+
+**Constat lié — l'enveloppe bootstrap de β̂ traverse zéro aux grands âges.** Le fit central
+donne β_x > 0 **partout** (minimum 0,00190 chez les hommes, 0,00374 chez les femmes), mais
+le quantile 2,5 % bootstrap passe sous zéro :
+
+| | âges concernés | nombre d'âges | fraction max de réplications à β̂ₓ < 0 |
+|---|---|---|---|
+| Hommes | **98 à 102** | 5 | **24,8 %** à l'âge 101 |
+| Femmes | **101 à 102** | 2 | **7,5 %** à l'âge 102 |
+
+Une fraction des réplications projette donc une mortalité **croissante** à ces âges (β_x < 0
+avec κ décroissant). Sans effet matériel sur la VAP — un rentier de 65 ans a une
+probabilité de l'ordre de 0,2 % d'atteindre 101 ans — mais à documenter : c'est la
+conséquence directe de la faible exposition aux grands âges, déjà acceptée lors du choix
+du plafond 102.
 
 **Trois sources d'incertitude en A.3, une seule en B** (BDVK05 §4.2, *spécification gelée,
 paramètres relâchés*) :
@@ -256,22 +292,31 @@ mais ne sont pas versionnés : ils sont reproductibles en ~3 min.
 
 ## TODO globaux
 
-- **A.3.i — variante de calibration définitive.** Le script retient `60:102 × 1970-2023`,
-  marqué **PROVISOIRE**. Éléments en main : plafond 102 verrouillé (aligné sur
-  `age_max_table` d'A.1) ; le R² de linéarité de κ pointe vers un début autour de 1970
-  (max du profil séquentiel en t₀ = 1967-1970 pour les six séries) ; déviance, BIC et RMSE
-  ne discriminent pas. Décision à prendre et à justifier au rapport.
-- **A.3.i — fin de période 2019 vs 2023 (COVID).** Inclure 2020-2021 réduit l'amplitude de
-  d̂ de 6,15 % à 12,82 % selon la variante (+10,52 % pour la variante de travail). d̂ pilote
-  les VAP et le SCR : l'arbitrage est matériel.
-- **A.3.i — instabilité de d̂ selon t₀, asymétrique entre sexes.** Chez les hommes,
-  restreindre le profil aux t₀ ≤ 1990 ne réduit pas l'amplitude de d̂ (50,9 % vs 50,6 %) :
-  l'instabilité est réelle, pas un artefact de fin de profil. Chez les femmes elle tombe de
-  44,0 % à 26,4 %. Le choix de période pèse donc plus lourd pour les hommes.
-- **A.3.i — ρ₁(Δκ) systématiquement négatif** (−0,14 à −0,54, le plus fortement chez les
-  femmes et quand on exclut le COVID). La marche aléatoire avec dérive suppose des
-  accroissements i.i.d. : cette autocorrélation la contredit. Limite du modèle de
-  projection à énoncer, pas un bug (valeur cohérente sur les 36 fits).
+- **A.3.i — calibration retenue : `60:102 × 1970-2023`** (cas de base). Justifications en
+  main : plafond 102 aligné sur `age_max_table` d'A.1 ; maximum du profil R²(t₀) en
+  1967-1970 pour les six séries ; déviance, BIC et RMSE ne discriminent pas ; et le choix
+  de plage d'âges est de toute façon quasi neutre sur ce qui pilote la VAP (β₆₅·d̂ varie de
+  moins de 1 % entre les trois plages). Reste à **rédiger** la justification.
+- **A.3.i — d̂ n'est comparable qu'à plage d'âges fixée.** Σβ_x = 1 fixe l'échelle de κ en
+  fonction du nombre d'âges : comparer les d̂ de 0:102 et 60:102 est un contre-sens. Toujours
+  raisonner sur **β₆₅·d̂**. Vaut aussi pour toute comparaison future en sections B, C et D.
+- **A.3.i — instabilité de β₆₅·d̂ selon t₀, asymétrique entre sexes** (constat **vérifié sur
+  la quantité invariante**, il ne s'agit pas d'un artefact d'échelle : la comparaison est
+  faite à plage d'âges fixée). Chez les hommes, restreindre aux t₀ ≤ 1990 ne réduit pas
+  l'amplitude (50,9 % vs 50,6 %) ; chez les femmes elle tombe de 44,0 % à 26,4 %. Le choix
+  de t₀ pèse donc plus lourd pour les hommes — à mentionner, sans en tirer de correction.
+- **A.3.i — ρ₁(Δκ) négatif : argument de défense, pas une limite.** On n'observe pas κ_t
+  mais son estimateur κ̂_t = κ_t + η_t. Donc Δκ̂_t = Δκ_t + η_t − η_{t−1} : même si les vrais
+  Δκ sont i.i.d., l'erreur d'estimation ajoute un **MA(1) à coefficient négatif**, dont
+  l'autocorrélation d'ordre 1 est bornée par **−0,5**. Nos valeurs (−0,14 à −0,54) sont
+  donc la **signature attendue** du bruit d'estimation, et non une violation de
+  l'hypothèse de marche aléatoire. **Corollaire à écrire au rapport** : σ̂ = sd(Δκ̂) est
+  gonflé par ce bruit, donc les intervalles de projection sont plutôt **conservateurs** —
+  ce qui va dans le sens de la prudence pour le SCR de la section D.
+- **A.3.ii — β̂ₓ change de signe dans le bootstrap aux grands âges.** Fit central positif
+  partout, mais l'enveloppe bootstrap traverse zéro aux âges 98-102 (H, jusqu'à 24,8 % des
+  réplications à l'âge 101) et 101-102 (F, jusqu'à 7,5 %) : une fraction des réplications
+  y projette une mortalité croissante. Sans effet matériel sur la VAP, à documenter.
 - **A.3.v/vi + B — `jumpchoice`, arbitrage GLOBAL.** Verrouillé à `"fit"` dans les trois
   appels (`forecast` de A.3.v, `simulate(LCboot)` de A.3.vi, et **la section B devra faire
   de même**). Si A.3 et B partaient d'amorces différentes, la comparaison d'IC demandée en

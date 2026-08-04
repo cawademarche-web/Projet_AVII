@@ -104,8 +104,16 @@ ajuste_lc <- function(D, ETR, ages_fit, annees_fit, bavard = FALSE) {
 #   R²   : linéarité de la tendance
 #   d̂    : dérive estimée = moyenne des accroissements Δκ
 #   σ̂    : volatilité des accroissements
-#   ρ₁   : autocorrélation d'ordre 1 de Δκ — la RWD suppose Δκ i.i.d.,
-#          donc ρ₁ ≈ 0 ; une tendance linéaire ne suffit pas.
+#   ρ₁   : autocorrélation d'ordre 1 de Δκ.
+# ATTENTION à l'interprétation de ρ₁ : on ne dispose pas de κ_t mais de son
+# ESTIMATEUR κ̂_t = κ_t + η_t. Donc Δκ̂_t = Δκ_t + η_t − η_{t-1} : même si
+# les vrais Δκ sont i.i.d., l'erreur d'estimation ajoute un MA(1) de
+# coefficient négatif, dont l'autocorrélation d'ordre 1 est bornée par −0,5.
+# Un ρ₁ négatif est donc la SIGNATURE ATTENDUE du bruit d'estimation, pas
+# une violation de l'hypothèse de marche aléatoire. Corollaire utile :
+# σ̂ = sd(Δκ̂) est gonflé par ce bruit, donc les intervalles de projection
+# sont plutôt CONSERVATEURS — ce qui va dans le sens de la prudence pour un
+# SCR (section D).
 diagnostic_kappa <- function(kt, an) {
   kt <- as.vector(kt)
   dk <- diff(kt)
@@ -166,9 +174,17 @@ for (sexe in c("h", "f")) {
         # RMSE sur les log-taux, fenêtre commune à toutes les variantes
         ecart <- log(fitted(f, type = "rates")[ages_comm, annees_comm]) -
                  log(mu_brut[[sexe]][ages_comm, annees_comm])
+        # d̂ N'EST PAS COMPARABLE d'une plage d'âges à l'autre : sous la
+        # contrainte d'identification Σβ_x = 1, l'échelle de κ dépend du
+        # nombre d'âges (103 âges pour 0:102, 43 pour 60:102). La quantité
+        # INVARIANTE est β_65·d̂ = taux annuel d'amélioration de ln µ_65,
+        # et c'est elle qui pilote la VAP d'une rente à 65 ans.
+        dg <- diagnostic_kappa(f$kt, an)
         grille <- rbind(grille, data.frame(
           sexe = sexe, ages = nom_plage, periode = paste0(debut, "-", fin),
-          t(diagnostic_kappa(f$kt, an)),
+          t(dg),
+          b65 = f$bx[f$ages == 65],          # $bx est sans dimnames : on
+          drift_65 = f$bx[f$ages == 65] * dg[["drift"]],   # sélectionne via $ages
           deviance = f$deviance,
           BIC      = -2 * f$loglik + f$npar * log(f$nobs),
           rmse_commune = sqrt(mean(ecart[fini_comm[[sexe]]]^2)),
@@ -177,8 +193,9 @@ for (sexe in c("h", "f")) {
     }
   }
 }
-print(format(grille[, c("sexe", "ages", "periode", "R2", "drift", "sigma",
-                        "rho1", "deviance", "BIC", "rmse_commune")],
+print(format(grille[, c("sexe", "ages", "periode", "R2", "drift", "b65",
+                        "drift_65", "sigma", "rho1", "deviance", "BIC",
+                        "rmse_commune")],
              digits = 4), row.names = FALSE)
 
 # Contrôle de convergence : une variante non convergée est une ligne du
@@ -214,22 +231,26 @@ profils <- list()
 for (sexe in c("h", "f")) {
   for (nom_plage in names(plages)) {
     f <- fits_grille[[paste(sexe, nom_plage, 1947, 2023, sep = "|")]]
-    profils[[paste(sexe, nom_plage)]] <- profil_kappa_sequentiel(f$kt, 1947:2023)
+    p <- profil_kappa_sequentiel(f$kt, 1947:2023)
+    # On travaille sur β_65·d̂, invariant d'échelle (cf. bloc 2a) : c'est le
+    # taux annuel d'amélioration de ln µ_65 implicite dans la projection.
+    p$drift_65 <- f$bx[f$ages == 65] * p$drift
+    profils[[paste(sexe, nom_plage)]] <- p
   }
 }
 for (cle in names(profils)) {
   p <- profils[[cle]]
   # La queue du profil (t0 tardifs) ne conserve qu'une vingtaine d'années :
-  # R² et d̂ y bougent pour une raison MÉCANIQUE (peu d'observations), pas
-  # méthodologique. On donne donc aussi l'amplitude de d̂ restreinte aux
-  # années de départ où le diagnostic a du sens.
+  # R² et la dérive y bougent pour une raison MÉCANIQUE (peu d'observations),
+  # pas méthodologique. On donne donc aussi l'amplitude restreinte aux années
+  # de départ où le diagnostic a du sens.
   st <- p$t0 <= 1990
   cat(" ", cle, ": R² max =", sprintf("%.4f", max(p$R2)), "en t0 =", p$t0[which.max(p$R2)],
-      "| d̂ sur t0 = 1947-1990 : de", sprintf("%.4f", min(p$drift[st])), "à",
-      sprintf("%.4f", max(p$drift[st])),
-      "(amplitude", sprintf("%.1f %%", 100 * diff(range(p$drift[st])) / abs(mean(p$drift[st]))), ")",
+      "| β_65·d̂ sur t0 = 1947-1990 : de", sprintf("%.5f", min(p$drift_65[st])), "à",
+      sprintf("%.5f", max(p$drift_65[st])),
+      "(amplitude", sprintf("%.1f %%", 100 * diff(range(p$drift_65[st])) / abs(mean(p$drift_65[st]))), ")",
       "| sur tout le profil :",
-      sprintf("%.1f %%", 100 * diff(range(p$drift)) / abs(mean(p$drift))), "\n")
+      sprintf("%.1f %%", 100 * diff(range(p$drift_65)) / abs(mean(p$drift_65))), "\n")
 }
 # HR09 note que κ est nettement plus linéaire sous un modèle APC que sous
 # Lee-Carter, la courbure résiduelle du κ de LC étant ce que le terme cohorte
@@ -240,17 +261,21 @@ png("figures/fig_A3_profil_kappa_sequentiel.png", width = 2000, height = 1400, r
 par(mfrow = c(2, 2))
 couleurs_plages <- c("steelblue", "darkorange", "forestgreen")
 for (sexe in c("h", "f")) {
-  for (quoi in c("R2", "drift")) {
+  # Panneau de droite en β_65·d̂ et NON en d̂ : tracer d̂ superposerait trois
+  # plages d'âges dont les échelles de κ diffèrent par construction
+  # (Σβ_x = 1), ce qui inviterait au contre-sens.
+  for (quoi in c("R2", "drift_65")) {
     ys <- lapply(names(plages), function(np) profils[[paste(sexe, np)]][[quoi]])
     plot(profils[[paste(sexe, names(plages)[1])]]$t0, ys[[1]], type = "n",
          ylim = range(unlist(ys)), xlab = expression(t[0]~"(année de départ)"),
-         ylab = if (quoi == "R2") expression(R^2~"de"~kappa[t]~"~"~t) else expression(hat(d)),
+         ylab = if (quoi == "R2") expression(R^2~"de"~kappa[t]~"~"~t)
+                else expression(beta[65]%.%hat(d)),
          main = paste(if (sexe == "h") "Hommes" else "Femmes",
-                      if (quoi == "R2") "— linéarité" else "— dérive"))
+                      if (quoi == "R2") "— linéarité de κ"
+                      else "— amélioration annuelle de ln µ(65)"))
     for (j in seq_along(ys)) lines(profils[[paste(sexe, names(plages)[j])]]$t0,
                                    ys[[j]], lwd = 2, col = couleurs_plages[j])
-    legend(if (quoi == "R2") "bottomleft" else "topleft", names(plages),
-           col = couleurs_plages, lwd = 2, cex = 0.8)
+    legend("bottomleft", names(plages), col = couleurs_plages, lwd = 2, cex = 0.8)
   }
 }
 par(mfrow = c(1, 1))
@@ -272,15 +297,25 @@ for (sexe in c("h", "f")) {
 par(mfrow = c(1, 1))
 dev.off()
 
-# ---- Variante de travail : PROVISOIRE -------------------------
-# Décision non tranchée : le tableau ci-dessus et les profils vont dans
-# PIPELINE.md, le choix définitif est un TODO du rapport.
-ages_travail   <- 60:102       # PROVISOIRE — rentiers de 65 ans ; la mortalité
-                               # jeune adulte relève d'un autre régime et un β_x
-                               # commun aux deux serait une contrainte forte.
-annees_travail <- 1970:2023    # PROVISOIRE — exclut l'après-guerre immédiat.
-cat("\nVariante de travail (PROVISOIRE) : âges", min(ages_travail), "-", max(ages_travail),
-    "| années", min(annees_travail), "-", max(annees_travail), "\n")
+# ---- Variante de travail : CAS DE BASE ------------------------
+ages_travail   <- 60:102       # rentiers de 65 ans ; la mortalité jeune adulte
+                               # relève d'un autre régime et un β_x commun aux
+                               # deux serait une contrainte forte.
+                               #  - âges 60-102 : plage adulte cohérente avec un produit de rente à 65 ans ;
+                               #    plafond aligné sur age_max_table d'A.1
+annees_travail <- 1970:2023    # exclut l'après-guerre immédiat ; le maximum du
+                               # profil R²(t0) tombe en 1967-1970 pour les six
+                               # séries. - début 1970 : maximum du profil R²(t0) en t0 = 1967-1970 sur les 6 séries,
+                               # indépendamment du sexe et de la plage d'âges (Denuit-Goderniaux / HR09 §3.10)
+# Fin de période TRANCHÉE sur 2023 (données complètes). Inclure 2020-2021
+# réduit |d̂| d'environ 10,5 % (bloc 2b), donc réduit les VAP : c'est le sens
+# ANTI-PRUDENTIEL pour un assureur de rentes, dont le risque est de
+# sous-estimer l'amélioration future de la mortalité. La variante 1970-2019
+# devient donc une SENSIBILITÉ PRUDENTIELLE, à propager en sections C et D
+# avec son effet chiffré sur VAP et SCR (TODO section C).
+cat("\nCas de base : âges", min(ages_travail), "-", max(ages_travail),
+    "| années", min(annees_travail), "-", max(annees_travail),
+    "| sensibilité prudentielle : 1970-2019\n")
 
 # ==============================================================
 # Bloc 3 — A.3.ii : paramètres estimés
@@ -635,10 +670,17 @@ for (sexe in c("h", "f")) {
   cat("       (ii) largeur relative de l'IC 95 % :", sprintf("%.2f %%", 100 * larg_rel[sexe]),
       "  [étalon BDVK05 à 90 % : 3,9 % F à 15,7 % H]\n")
 }
-# (iii) asymétrie H/F : BDVK05 obtient systématiquement les hommes plus larges
+# (iii) asymétrie H/F : BDVK05 obtient systématiquement les hommes plus
+# larges, et l'attribue à des IC plus larges sur la projection des κ
+# masculins. On imprime donc les σ̂(Δκ) des deux sexes à côté du ratio : ce
+# sont eux qui expliquent l'ampleur (ou la faiblesse) de l'écart.
+sigma_kappa <- c(h = diagnostic_kappa(LCfit_h$kt, annees_travail)[["sigma"]],
+                 f = diagnostic_kappa(LCfit_f$kt, annees_travail)[["sigma"]])
 cat("       (iii) rapport des largeurs H/F :", sprintf("%.2f", larg_rel["h"] / larg_rel["f"]),
-    if (larg_rel["h"] > larg_rel["f"]) " — hommes plus larges, conforme à BDVK05\n"
-    else " — femmes plus larges, INVERSE de BDVK05 : à commenter\n")
+    "| σ̂(Δκ) : H =", sprintf("%.4f", sigma_kappa["h"]),
+    "F =", sprintf("%.4f", sigma_kappa["f"]),
+    if (larg_rel["h"] > larg_rel["f"]) "— hommes plus larges, conforme à BDVK05\n"
+    else "— femmes plus larges, INVERSE de BDVK05\n")
 
 # (iv) hiérarchie des dispersions paramétriques. α, β et κ n'ont pas la même
 # échelle : on donne l'écart-type bootstrap brut ET normalisé par l'amplitude
@@ -661,6 +703,15 @@ for (sexe in c("h", "f")) {
   names(et_b) <- ages_travail
   cat("           écart-type de β̂ aux âges 65 / 85 / 101 / 102 :",
       paste(sprintf("%.5f", et_b[as.character(c(65, 85, 101, 102))]), collapse = " / "), "\n")
+  # Le fit central donne β_x > 0 partout, mais l'ENVELOPPE bootstrap peut
+  # traverser 0 aux âges extrêmes : une fraction des réplications y projette
+  # alors une mortalité CROISSANTE (β_x < 0 avec κ décroissant).
+  q_b <- apply(params_boot(b, "bx"), 1, quantile, probs = 0.025)
+  names(q_b) <- ages_travail
+  zero <- ages_travail[q_b < 0]
+  cat("           âges où l'enveloppe bootstrap de β̂ traverse 0 :",
+      if (length(zero)) paste(range(zero), collapse = "-") else "aucun",
+      "|", length(zero), "âge(s)\n")
 }
 
 png("figures/fig_A3_hist_e65_cohorte.png", width = 2000, height = 950, res = 150)
