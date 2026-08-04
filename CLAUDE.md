@@ -37,6 +37,20 @@ Noms de variables imposés, interdiction d'utiliser `r`, `i` ou `t` seuls :
 - `rdt_actifs  <- 0.04`  # fait croître les ACTIFS uniquement, une fois
                           # par an (section D). Sensibilité : 0.01.
 
+## Convention de rente (verrouillée)
+Les rentes du projet sont à terme échu (paiement en fin de période).
+Donc `vap_rente()` somme à partir de k = 1, jamais k = 0 :
+a_65 = Σ_{k≥1} v^k · ₖp₆₅. La rente [B] est temporaire 15 ans à terme
+échu : somme de k = 1 à 15. Ne jamais écrire « rente immédiate » dans
+le code ou les commentaires, c'est ambigu.
+
+## Indexation des matrices
+Les matrices âges × années ont des dimnames en caractères, ligne 1 =
+âge 0. Toujours indexer par nom (`M[as.character(65), ]`), jamais par
+position (`M[65, ]` renvoie l'âge 64). Cette règle vaut pour tous les
+scripts, en particulier la diagonale de cohorte 65 → 66 → 67 des
+sections B, C et D.
+
 ## Contrat d'interface entre sections
 Chaque script sauve ses objets clés via saveRDS() dans `resultats/` ;
 le script suivant les CHARGE, il ne recalcule jamais.
@@ -51,7 +65,7 @@ re-simuler.
 scripts/01_donnees_taux.R · 02_leecarter_stmomo.R · 03_simulation_kappa.R ·
 04_pricing_vap.R · 05_solvabilite_scr.R
 resultats/ (RDS) · figures/ (PNG, nommés fig_<section>_<contenu>.png) ·
-docs/ (brief, checklist, PIPELINE.md) · donnees/ (HMD, jamais commit si licence)
+docs/ (brief, checklist, PIPELINE.md) · donnees/ (HMD)
 
 ## Reproductibilité
 `set.seed(1234)` en tête de chaque script qui simule. Toute quantité

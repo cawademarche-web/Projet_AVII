@@ -2,6 +2,12 @@
 
 À garder ouvert pendant que Claude Code tourne. Dès qu'une valeur ne matche pas un signal attendu ci-dessous : stop, on regarde le code avant de continuer.
 
+> **Note de correspondance avec le brief officiel** : la numérotation de cette
+> checklist est antérieure au brief. Ici « A1 » = **A.1** du brief (taux MLE)
+> et « A2 » = **A.3** du brief (Lee-Carter). La discussion **A.2** du brief
+> (espérance de vie périodique, âge médian/IQR, expansion-rectangularisation)
+> n'a pas de section dédiée dans cette checklist.
+
 ## A1 — Taux MLE (µ̂ₓ = Dₓₜ/ETRₓₜ)
 - µ̂ₓ croissant avec l'âge, quasi linéaire en échelle log au-delà de ~40 ans (Gompertz).
 - IC 95% étroits aux âges à forte exposition (30–70 ans), larges aux grands âges.
@@ -22,7 +28,7 @@
 ## C — VAP et primes
 - VAP[B] < VAP[A] toujours (la rente temporaire ampute la queue longue, la plus incertaine).
 - VAP décroît quand t augmente ; VAP[A] plus sensible à t que VAP[B] (effet duration).
-- Ordre de grandeur : rente viagère à 65 ans à t=3% ≈ 15–18× la rente annuelle.
+- Ordre de grandeur : rente viagère à 65 ans à t=3% ≈ 13–16× la rente annuelle.
 - 🚩 VAP[B] > VAP[A], ou VAP insensible à t → logique de calcul cassée.
 
 ## D — Solvabilité / SCR (le plus risqué)
