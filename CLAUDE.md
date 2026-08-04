@@ -78,6 +78,11 @@ aléatoire doit être identique d'un run à l'autre.
    pour la section.
 3. Mettre à jour `docs/PIPELINE.md` : section → script → méthode →
    outputs (chiffres clés) → TODO/choix à justifier.
+   RÈGLE STRICTE : aucune valeur numérique n'entre dans PIPELINE.md
+   autrement que **recopiée d'une sortie console réelle** du run qui vient
+   d'être exécuté. Interdiction d'anticiper une valeur, de la reprendre d'un
+   plan, d'un run antérieur ou d'une estimation. Si un chiffre attendu diverge
+   du chiffre obtenu, c'est une information à remonter, pas à lisser.
 4. Lister les TODO "à justifier dans le rapport" plutôt que de trancher
    silencieusement (ex. plage d'âges de calibration).
 5. Commit avec message clair.

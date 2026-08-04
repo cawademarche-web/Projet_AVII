@@ -9,9 +9,21 @@
 > n'a pas de section dédiée dans cette checklist.
 
 ## A1 — Taux MLE (µ̂ₓ = Dₓₜ/ETRₓₜ)
-- µ̂ₓ croissant avec l'âge, quasi linéaire en échelle log au-delà de ~40 ans (Gompertz).
-- IC 95% étroits aux âges à forte exposition (30–70 ans), larges aux grands âges.
-- 🚩 IC plus large à 50 ans qu'à 90 ans → exposition mal calculée.
+- µ̂ₓ globalement croissant avec l'âge, quasi linéaire en échelle log au-delà
+  de ~40 ans (Gompertz). Quelques décrochages locaux = bruit d'échantillonnage,
+  attendus, et argument en faveur du lissage Lee-Carter.
+- Précision des IC : largeur relative = 2·1,96·√(µ̂/ETR)/µ̂ = 2·1,96/√D.
+  Elle ne dépend QUE du nombre de décès, jamais de l'exposition — ce n'est donc
+  pas un test d'exposition. Profil attendu : courbe en U, large aux âges jeunes
+  (peu de décès), MINIMALE autour du mode des décès (~85–90 ans), large à
+  nouveau aux âges extrêmes (peu de survivants).
+- 🚩 Largeur relative ≠ 2·1,96/√D → erreur de formule dans le calcul de l'IC.
+- TEST D'EXPOSITION : contrôle croisé de µ̂ contre Mx_1x1.txt publié
+  par la HMD. Il valide la chaîne de mise en forme — appariement des colonnes
+  Male/Female, recodage 110+, ordre de remplissage de la matrice, alignement
+  âge/année. Une inversion H/F ou un décalage d'indexation produirait un écart
+  d'ordre 1.
+- 🚩 Écart max > 1e-4 sur les cellules à ETR ≥ 1000 → défaut de mise en forme.
 
 ## A2 — Lee-Carter (ln µₓ(t) = αₓ + βₓ·κₜ)
 - κₜ décroît ~linéairement dans le temps.
