@@ -17,7 +17,7 @@ Numérotation alignée sur le brief officiel : A.1 (MLE), A.2 (discussion), A.3 
   sur e₆₅ — à mentionner.|
 | A.2 (discussion : espérance de vie, âge médian/IQR, expansion-rectangularisation) | `scripts/01_donnees_taux.R` (indicateurs) | Table de survie périodique ℓ_x = exp(−Σ_{k<x} µ_k) ; e_x ≈ Σ_{k≥1} ₖp_x + ½ (curtate + ½) ; quantiles de l'âge au décès par interpolation de ℓ_x | `resultats/01_indicateurs.rds` ; 1947 → 2023 : e₀ 58,87 → 79,45 (H) et 63,96 → 84,23 (F) ; e₆₅ 11,97 → 18,40 (H) et 13,51 → 21,57 (F) ; médiane 67,85 → 82,43 (H) et 72,95 → 87,08 (F) ; IQR 27,94 → 15,79 (H) et 22,88 → 12,70 (F) ; sensibilité troncature 2023 (bornes 100→103) : e₆₅ 18,388 → 18,398 (H), 21,545 → 21,578 (F) ; 4 figures `fig_A2_courbes_survie.png`, `fig_A2_courbe_deces.png`, `fig_A2_esperance_vie.png`, `fig_A2_mediane_iqr.png` | Rédaction de la discussion (expansion / rectangularisation) = rapport |
 | A.3 (Lee-Carter : fit, résidus, projection, bootstrap N=5000) | `scripts/02_leecarter_stmomo.R` | LC Poisson via StMoMo `fit(lc(link="log"), Dxt=, Ext=, ages=, years=)` — expositions **centrales** (validées par le contrôle croisé d'A.1 contre le Mx publié) ; poids w_{x,t} = 0 sur les cellules ETR = 0 ; projection `forecast(h=50, kt.method="mrwd", jumpchoice="fit")` ; bootstrap `type="semiparametric", deathType="observed"` | voir les sous-sections ci-dessous | voir TODO globaux |
-| B (5000 trajectoires κ, IC, comparaison avec bootstrap) | `scripts/03_simulation_kappa.R` | — | — | — |
+| B (5000 trajectoires κ, IC, comparaison avec bootstrap) | `scripts/03_simulation_kappa.R` | — | — | Conception arrêtée ci-dessous (« Décisions de conception pour le script 03 ») |
 | C (VAP rentes [A]/[B], primes) | `scripts/04_pricing_vap.R` | — | — | **Sensibilité prudentielle COVID** : rejouer VAP et primes sur la calibration 1970-2019 (β₆₅·d̂ = −0,01995 H / −0,01918 F contre −0,01823 / −0,01727 en cas de base) et chiffrer l'écart ; à propager en D sur le SCR |
 | D (BOF, SCR 2022/2023, sensibilité) | `scripts/05_solvabilite_scr.R` | — | — | — |
 
@@ -89,10 +89,23 @@ En **gras** : le cas de base retenu.
 Lectures à porter au rapport :
 - **Vérification de l'artefact d'échelle.** Période 1970-2023, les trois plages d'âges :
   d̂ = −2,1934 / −0,7974 / −0,6023 (hommes), soit un rapport 3,6 ; mais
-  β₆₅·d̂ = −0,01815 / −0,01830 / −0,01823, **amplitude relative 0,86 %**. Chez les femmes :
-  −0,01740 / −0,01738 / −0,01727, **0,78 %**. Les trois plages décrivent donc la **même**
-  dynamique d'amélioration à 65 ans : ~1,8 %/an chez les hommes, ~1,7 %/an chez les femmes.
-  Le choix de plage d'âges ne change pratiquement rien à ce qui pilote la VAP.
+  β₆₅·d̂ = −0,01815 / −0,01830 / −0,01823, **amplitude relative 0,9 %**. Chez les femmes :
+  −0,01740 / −0,01738 / −0,01727, **0,8 %**. Les trois plages décrivent donc la **même**
+  dynamique d'amélioration à 65 ans : ~1,8 %/an (H), ~1,7 %/an (F).
+- **Mais cette neutralité dépend de la période** — amplitude de β₆₅·d̂ **entre** les trois
+  plages d'âges :
+
+  | début de période | hommes | femmes |
+  |---|---|---|
+  | 1947 (fin 2023) | **16,0 %** (−0,01537 / −0,01359 / −0,01312) | **8,4 %** (−0,01779 / −0,01659 / −0,01637) |
+  | 1970 (fin 2023) | 0,9 % | 0,8 % |
+  | 1980 (fin 2023) | 1,2 % | 1,0 % |
+
+  La plage d'âges n'est neutre **qu'une fois l'après-guerre exclu**. Sur 1947-2023, elle
+  déplace β₆₅·d̂ de 16 % chez les hommes — ce qui n'est pas négligeable pour une VAP. C'est
+  un **argument supplémentaire en faveur d'un début en 1970** : quand les trois plages
+  cessent de diverger, c'est que la structure β_x est devenue stable dans le temps, ce que
+  Lee-Carter suppose précisément.
 - **Déviance et BIC ne sont pas comparables entre variantes** : le jeu de données change
   (nobs va de 2 322 à 7 931 cellules). Ils ne discriminent rien ici.
 - La **RMSE sur fenêtre commune** (60-102 × 1980-2019) est comparable, mais ne discrimine
@@ -290,13 +303,44 @@ La formulation « A.3 = incertitude sur (α, β) » est **fausse** et ne doit ap
 Les artefacts du run de validation (`LCboot_200.rds`, `LCsimPU_200.rds`) restent sur disque
 mais ne sont pas versionnés : ils sont reproductibles en ~3 min.
 
+## Décisions de conception pour le script 03 (section B) — arrêtées avant codage
+
+### Sensibilité prudentielle COVID : portée
+La sensibilité 1970-2019 exige un **second jeu de 5 000 trajectoires**, issu du fit
+`60:102 × 1970-2019` (déjà disponible dans la grille de `resultats/02_variantes.rds`).
+
+| | Décision | Raison |
+|---|---|---|
+| (a) | **Pas de second bootstrap.** | La sensibilité porte sur la **VAP centrale**, pas sur les intervalles. Re-bootstrapper coûterait 86 min pour une information qui n'est pas demandée. |
+| (b) | Le script 03 produit **deux jeux de trajectoires** : cas de base (1970-2023) et variante (1970-2019). | Les deux alimentent C ; `simulate(LCfit, nsim = 5000, h = 50)` coûte quelques secondes, contrairement au bootstrap. |
+| (c) | **Portée limitée à la section C** (VAP et primes). La section D **n'est pas dupliquée**. | La sensibilité exigée par le brief en D porte sur le **rendement des actifs** (`rdt_actifs` = 1 % au lieu de 4 %), pas sur la calibration de mortalité. |
+
+### Interface officielle vers C et D : la diagonale de cohorte
+`resultats/LCsimPU_5000.rds` pèse **340 Mo** et la section B produira un array de taille
+comparable. **C et D n'ont pas besoin de l'array complet** : la seule quantité qu'ils
+utilisent est la **diagonale de cohorte** µ_{65+k}(2022+k), k = 0…36 (âges 65 à 101,
+années 2022 à 2058), par trajectoire et par sexe.
+
+- **Format** : deux matrices **37 × 5000** (âges en lignes, **trajectoires en colonnes**,
+  conformément à CLAUDE.md), une par sexe. Environ **3 Mo**, donc **versionnable**.
+- k = 0…36 couvre exactement la convention de clôture d'A.1 (table jusqu'à ℓ₁₀₂, donc µ
+  mobilisé jusqu'à l'âge 101) : ₖp₆₅ pour k = 1…37 pour la rente [A], k = 1…15 pour la
+  rente [B], et µ₆₅(2022) pour les décès de la première année en section D.
+- **Déclaré comme l'interface officielle** vers les sections C et D. L'array complet reste
+  sur disque, **hors versionnement**, pour les seules figures d'IC de la section B.
+- Même contrainte qu'en A.3 : `jumpchoice = "fit"` et `kt.method = "mrwd"`, sinon la
+  comparaison B.3 avec les intervalles bootstrap devient ininterprétable.
+
 ## TODO globaux
 
 - **A.3.i — calibration retenue : `60:102 × 1970-2023`** (cas de base). Justifications en
   main : plafond 102 aligné sur `age_max_table` d'A.1 ; maximum du profil R²(t₀) en
   1967-1970 pour les six séries ; déviance, BIC et RMSE ne discriminent pas ; et le choix
-  de plage d'âges est de toute façon quasi neutre sur ce qui pilote la VAP (β₆₅·d̂ varie de
-  moins de 1 % entre les trois plages). Reste à **rédiger** la justification.
+  de plage d'âges devient quasi neutre sur ce qui pilote la VAP **une fois 1970 retenu**
+  (β₆₅·d̂ varie de 0,8-0,9 % entre les trois plages sur 1970-2023, contre **16,0 % (H)** et
+  **8,4 % (F)** sur 1947-2023). Cette neutralité est elle-même un argument pour 1970 : elle
+  signale que la structure β_x s'est stabilisée, hypothèse centrale de Lee-Carter. Reste à
+  **rédiger** la justification.
 - **A.3.i — d̂ n'est comparable qu'à plage d'âges fixée.** Σβ_x = 1 fixe l'échelle de κ en
   fonction du nombre d'âges : comparer les d̂ de 0:102 et 60:102 est un contre-sens. Toujours
   raisonner sur **β₆₅·d̂**. Vaut aussi pour toute comparaison future en sections B, C et D.
@@ -332,9 +376,17 @@ mais ne sont pas versionnés : ils sont reproductibles en ~3 min.
   de StMoMo, désigné *Poisson bootstrap* par Brouhns, Denuit & Van Keilegom (2005) ». La
   vraie alternative discutée par le papier est le bootstrap **paramétrique** (BDV 2002b,
   tirage dans la normale multivariée asymptotique), **pas** le bootstrap résiduel.
-- **A.3.vi — diagnostics divergeant des étalons**, à commenter plutôt qu'à taire : biais
-  (i) sous l'étalon BDVK05 (−0,06 % / −0,07 % contre 0,1-1,0 %) ; asymétrie H/F (iii)
-  conforme en sens mais très atténuée (1,08 contre ≈ 4,0).
+- **A.3.vi — les quatre diagnostics sont conformes** ; deux méritent une phrase
+  d'explication au rapport plutôt qu'un simple « conforme ».
+  **(i) Biais de −0,06 % (H) / −0,07 % (F)** : l'étalon BDVK05 de 0,1-1,0 % est un
+  **plafond** (« au-delà du pourcent, cherche le bug »), pas une cible ; un biais dix fois
+  plus petit est un bon résultat. À n = 200 on mesurait ±0,15 % : le passage à 5000 a
+  absorbé l'erreur de Monte-Carlo, ce qui **valide le protocole en deux temps**.
+  **(iii) Asymétrie H/F de 1,08** : BDVK05 attribue l'écart aux IC plus larges sur la
+  projection des κ masculins ; **ici c'est la volatilité féminine qui est supérieure**
+  (σ̂(Δκ) = 0,9990 pour les femmes contre 0,8924 pour les hommes). Un ratio proche de 1 est
+  donc **cohérent avec les données autrichiennes** — il n'a aucune raison de reproduire le
+  cas belge.
 - **Section D — précision path-wise (à savoir énoncer, rien à coder).** `simulate()` de
   StMoMo produit de **vraies marches aléatoires** (algorithme 2 de HR09 §4.7 :
   κ*_{t+j} = κ_t + j·θ̂ + σ̂·Σᵢ z*ᵢ, z*ᵢ i.i.d.), et non des droites déviées par un tirage
