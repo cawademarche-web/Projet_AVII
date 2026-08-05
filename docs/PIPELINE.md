@@ -19,7 +19,7 @@ Numérotation alignée sur le brief officiel : A.1 (MLE), A.2 (discussion), A.3 
 | A.3 (Lee-Carter : fit, résidus, projection, bootstrap N=5000) | `scripts/02_leecarter_stmomo.R` | LC Poisson via StMoMo `fit(lc(link="log"), Dxt=, Ext=, ages=, years=)` — expositions **centrales** (validées par le contrôle croisé d'A.1 contre le Mx publié) ; poids w_{x,t} = 0 sur les cellules ETR = 0 ; projection `forecast(h=50, kt.method="mrwd", jumpchoice="fit")` ; bootstrap `type="semiparametric", deathType="observed"` | voir les sous-sections ci-dessous | voir TODO globaux |
 | B (5000 trajectoires κ, IC, comparaison avec bootstrap) | `scripts/03_simulation_kappa.R` | `simulate(LCfit, nsim = 5000, h = 50, kt.method = "mrwd", jumpchoice = "fit")` — α, β, dérive d̂ et volatilité σ̂ **gelés au fit central**, seul l'aléa futur de κ est simulé : **UNE** source d'incertitude contre trois en A.3.vi. Diagonale de cohorte µ_{65+k}(2022+k) extraite par trajectoire | `resultats/03_diagonales_cohorte.rds` (4 matrices 37 × 5000, 0 NA) ; e₆₅ de cohorte sous B : 19,762 [18,823 ; 20,660] (H) et 23,149 [22,123 ; 24,162] (F) ; largeur relative **9,30 % (H)** et **8,81 % (F)** contre 9,83 % / 9,12 % en A.3.vi ⇒ **rapport A.3/B = 1,058 (H) et 1,036 (F)** ; contrôles RWD à h = 50 : sd(κ) = 6,2391 vs σ̂·√50 = 6,3100 (H), 7,1962 vs 7,0641 (F) ; 5 figures `fig_B1_taux_cohorte.png`, `fig_B2_trajectoires_kappa.png`, `fig_B2_ic_taux.png`, `fig_B3_comparaison_ic.png`, `fig_B3_e65_comparaison.png` | voir sous-section « Section B — détail » |
 | C (VAP rentes [A]/[B], primes) | `scripts/04_pricing_vap.R` | **100 % custom, base R, aucun `library()`.** Chaîne µ → ₖp₆₅ → VAP : `probas_survie_trajectoire()` = `apply(M, 2, function(mu) cumprod(exp(-mu)))` — cumprod **colonne par colonne**, force constante par morceaux, même convention qu'A.1 et qu'`esperance_vie_cohorte()` des scripts 02/03 ; `vap_rente(S, taux, n)` = `colSums(v^(1:n) · S[1:n, ])`, **terme échu**, somme de k = 1 à n (n = 37 pour [A], borne ℓ₁₀₂ ; n = 15 pour [B]). Un seul taux dans le script : `taux_tarif = 3 %` | `resultats/04_vap.rds` (3,09 Mo) ; **VAP[A] = 13,7899 (H) et 15,6995 (F)**, VAP[B] = 10,4086 (H) et 11,1011 (F) ; variances 0,061949 / 0,067253 ([A]) et 0,003615 / 0,001602 ([B]) ; primes uniques = ces moyennes (rente annuelle de 1) ; sensibilité 1 % → 5 % : **−33,48 % [A] contre −23,92 % [B]** (H) et −35,96 % contre −24,48 % (F) ; sensibilité COVID à 3 % : **+3,48 % / +2,52 %** sur [A], +1,60 % / +0,89 % sur [B] ; 2 figures `fig_C_hist_vap.png`, `fig_C_sensibilite_taux.png` | voir sous-section « Section C — détail » |
-| D (BOF, SCR 2022/2023, sensibilité) | `scripts/05_solvabilite_scr.R` | — | — | — |
+| D (BOF, SCR 2022/2023, sensibilité) | `scripts/05_solvabilite_scr.R` | **100 % custom, base R, aucun `library()`**, `set.seed(1234)` ligne 1 (le script TIRE : binomiales des décès, seule source d'aléa nouvelle). Entrée unique `04_vap.rds$base`. Primitive unique `annuite_conditionnelle(S, m, n, taux)` = `colSums(v^(1:n)·S[(m+1):(m+n), ]) / S[m, ]`, terme échu ; `n_reste(produit, m)` = 37−m ou 15−m. `calcule_BE()` et `calcule_SCR()` (VaR `type = 1`, statistique d'ordre). BE = **espérance** sur les 5000 trajectoires ; SCR₂₀₂₃ en lecture « état central ». **Nombres aléatoires communs** : 4 `rbinom` tirés une fois pour les 2 portefeuilles × 2 rendements | `resultats/05_scr.rds` ; **BOF₂₀₂₂ = −1 714,54 [A] et −785,02 [B]** ; **SCR₂₀₂₂ = +282,25 [A] et −78,77 [B]** ; SCR₂₀₂₃ = +285,70 / −66,69 ; sous `rdt_actifs = 1 %` : **+715,92 / +237,54** et +703,29 / +230,04 ; variance de BOF₂₀₂₃ **94,8 % systématique sur [A] contre 54,4 % sur [B]** ; erreur MC du quantile ±14,14 [A] / ±1,90 [B] ; borne comonotone H/F SCR₂₀₂₂[A] = 517,78 (**+83,4 %**) ; 2 figures `fig_D_hist_bof2023.png`, `fig_D_scr_comparaison.png` | voir sous-section « Section D — détail » |
 
 ## Section A.3 — détail (chiffres recopiés de la console du run `n_boot = 5000`)
 
@@ -577,6 +577,157 @@ Séparation **structurelle** base / covid : la section D charge `$base` et rien 
 taux que 3 % n'est sauvée, le BE de D s'actualisant à `taux_actu_be = 2 %` depuis
 `$base$survies`.
 
+## Section D — détail (chiffres recopiés de la console du run de `05_solvabilite_scr.R`)
+
+### Ce qui distingue D des sections amont
+Premier script depuis 03 à **tirer** : `set.seed(1234)` en ligne 1, et **quatre `rbinom`
+et quatre seulement** — les binomiales de décès sont la seule source d'aléa nouvelle de
+la section. Un seul `readRDS`, sur `04_vap.rds$base` ; `$covid` et
+`03_diagonales_cohorte.rds` ne sont jamais lus. **Deux taux et deux seuls** :
+`taux_actu_be = 2 %` et `rdt_actifs = 4 %` — un grep de la valeur du taux technique
+comme des variables `r` / `i` / `t` ne renvoie rien.
+
+**Convention de date rappelée** : le paiement k tombe **en date 2022+k**, à la clôture
+de la k-ième année d'assurance ; ₁p₆₅ = exp(−µ₆₅(2022)) porte sur l'année civile 2022.
+
+### Structure de l'aléa — les DEUX premières années sont déterministes
+Le fit LC va jusqu'en **2023**, donc µ₆₅(2022) **et** µ₆₆(2023) sont des valeurs
+ajustées. Mesuré : `étendue(₁p₆₅) = 0` et `étendue(q₆₆) = 0` exactement, tandis que
+`étendue(₃p₆₅) = 3,09e-3 (H)` et `1,71e-3 (F)` — **2024 est la première année
+stochastique**. Conséquence : le **comptage** des décès ne porte que du risque
+diversifiable les deux années ; le systématique n'entre que par la réévaluation du BE,
+a₆₆(j) pour SCR₂₀₂₂ et a₆₇(j) pour SCR₂₀₂₃.
+
+| | q₆₅ | q₆₆ | état central 2023 |
+|---|---|---|---|
+| Hommes | 0,014079 | 0,014668 | 492,96 → **493** |
+| Femmes | 0,007079 | 0,007217 | 496,46 → **496** |
+
+### Annuités à 2 %, terme échu — le piège d'indice de la temporaire
+| | a₆₅ | a₆₆ | a₆₇ | termes |
+|---|---|---|---|---|
+| [A] Hommes | 15,3124 | 14,8417 | 14,3639 | 37 / 36 / 35 |
+| [A] Femmes | 17,6060 | 17,0862 | 16,5546 | 37 / 36 / 35 |
+| [B] Hommes | 11,1576 | 10,5433 | 9,9142 | 15 / **14** / **13** |
+| [B] Femmes | 11,9221 | 11,2473 | 10,5556 | 15 / **14** / **13** |
+
+À la date 2023 la prestation k = 1 de [B] est déjà versée : il reste **14** termes, pas
+15. Sur [A] une borne trop haute fait planter R (m+n > 37) ; sur [B] elle renvoie
+silencieusement les lignes "2".."16". Rien ne protège la temporaire sauf l'oracle 3.
+
+### D.1 à D.3 — BOF et SCR₂₀₂₂ (rdt_actifs = 4 %)
+| | A₂₀₂₂ | BE₂₀₂₂ | BOF₂₀₂₂ | moy. BOF₂₀₂₃ | sd | q₀,₅ % | **SCR₂₀₂₂** |
+|---|---|---|---|---|---|---|---|
+| **[A]** | 14 744,68 | 16 459,21 | **−1 714,54** | −1 453,94 | 234,91 | −2 039,03 | **+282,25** |
+| **[B]** | 10 754,85 | 11 539,87 | **−785,02** | −585,62 | 56,19 | −720,45 | **−78,77** |
+
+BOF₂₀₂₂ < 0 est le résultat **attendu** : la prime a été tarifée à 3 % et le BE
+s'actualise à 2 %, donc BE₂₀₂₂ > A₂₀₂₂ mécaniquement. SCR₂₀₂₂[A] − SCR₂₀₂₂[B] = 361,03.
+
+### D.4 — SCR₂₀₂₃, lecture « état central »
+| | A₂₀₂₃ᶜ | BE₂₀₂₃ᶜ | BOF₂₀₂₃ᶜ | moy. BOF₂₀₂₄ | sd | **SCR₂₀₂₃** | écart / 2022 |
+|---|---|---|---|---|---|---|---|
+| [A] | 14 345,46 | 15 791,69 | −1 446,23 | −1 187,14 | 239,53 | **+285,70** | **+3,45** |
+| [B] | 10 196,04 | 10 776,48 | −580,44 | −387,34 | 56,44 | **−66,69** | +12,09 |
+
+⚠️ **L'écart +3,45 sur [A] est DANS LE BRUIT** (erreur MC du quantile ±14,14) : il ne
+doit pas être interprété. Celui de [B], +12,09 contre ±1,90, est interprétable.
+
+### D.5 — les 8 SCR, bruts et plancherisés
+| rdt | portef. | date | SCR brut | max(SCR, 0) |
+|---|---|---|---|---|
+| 4 % | [A] | 2022 | 282,25 | 282,25 |
+| 4 % | [A] | 2023 | 285,70 | 285,70 |
+| 4 % | [B] | 2022 | **−78,77** | **0,00** |
+| 4 % | [B] | 2023 | **−66,69** | **0,00** |
+| 1 % | [A] | 2022 | 715,92 | 715,92 |
+| 1 % | [A] | 2023 | 703,29 | 703,29 |
+| 1 % | [B] | 2022 | 237,54 | 237,54 |
+| 1 % | [B] | 2023 | 230,04 | 230,04 |
+
+Le SCR **brut** est la valeur de référence, seule sur laquelle portent les oracles 5 et
+6. La colonne plancherisée est la lecture prudentielle : **un VaR négatif n'est pas un
+besoin de capital négatif**.
+
+### Diagnostic 1 — décomposition de la variance de BOF₂₀₂₃
+En réécrivant BOF₂₀₂₃ = A₂₀₂₂(1+i) − N_h·ä₆₆ʰ − N_f·ä₆₆ᶠ avec ä₆₆ = 1 + a₆₆ (prestation
+de 1 versée en date 2023 + valeur du reliquat ; aucun double comptage) :
+
+| | var empirique | idiosyncratique | systématique | cor(a₆₆ʰ, a₆₆ᶠ) |
+|---|---|---|---|---|
+| **[A]** | 55 181,3 | 2 892,4 (**5,2 %**) | 52 318,3 (**94,8 %**) | +0,0098 |
+| **[B]** | 3 157,8 | 1 452,0 (**45,6 %**) | 1 735,2 (**54,4 %**) | +0,0194 |
+
+**C'est le résultat central de la section**, et il referme la promesse laissée au TODO
+C.2 : le SCR de [A] est un capital de **longévité systématique non diversifiable** à
+95 %, celui de [B] est pour moitié de la **fluctuation d'échantillonnage** — que
+1000 têtes de plus feraient fondre, contrairement au premier.
+
+### Diagnostic 2 — le signe du SCR : gain de spread contre queue
+Identité **exacte** `SCR = queue − gain`, avec `gain = −E[perte] = A_t·(i−r)/(1+r)` en
+forme fermée (les deux BE se compensent exactement grâce à la récurrence d'annuité, donc
+le seul gain espéré est le spread sur les actifs).
+
+| rdt | portef. | date | gain empirique | gain forme fermée | queue | SCR |
+|---|---|---|---|---|---|---|
+| 4 % | [A] | 2022 | 289,10 | 289,11 | 571,36 | 282,25 |
+| 4 % | [A] | 2023 | 282,37 | 281,28 | 568,07 | 285,70 |
+| 4 % | [B] | 2022 | 210,88 | 210,88 | 132,11 | **−78,77** |
+| 4 % | [B] | 2023 | 200,70 | 199,92 | 134,02 | −66,69 |
+| 1 % | [A] | 2022 | −144,56 | −144,56 | 571,36 | 715,92 |
+| 1 % | [A] | 2023 | −135,22 | −136,31 | 568,07 | 703,29 |
+| 1 % | [B] | 2022 | −105,43 | −105,44 | 132,11 | 237,54 |
+| 1 % | [B] | 2023 | −96,02 | −96,80 | 134,02 | 230,04 |
+
+**Explication chiffrée du SCR négatif de [B]** : le gain de spread (210,88) dépasse la
+queue à 99,5 % (132,11). Sur [A] la queue (571,36) l'emporte largement. Sous
+`rdt_actifs = 1 %` le spread i−r devient **négatif** et le gain change de signe : les
+quatre SCR redeviennent franchement positifs. La queue, elle, est **strictement
+inchangée** entre les deux rendements — c'est la lecture directe de l'oracle 6.
+
+### Oracles — les 12 satisfaits (34 lignes `OK`, 0 `ECHEC`)
+| Oracle | Résultat |
+|---|---|
+| 1 / 1bis — q₆₅ **et** q₆₆ communes | étendues **0 exactement** ; étendue ₃p₆₅ = 3,09e-3 / 1,71e-3 > 0 |
+| **2 — ancrage ABSOLU** : a₆₅ vs `sensibilite[taux = 2 %]` du script 04 | écart **0 exactement** aux 4 cas (A/B × H/F) |
+| **3 — ancrage RELATIF** : a₆₅ = v·₁p₆₅·(1+a₆₆), puis a₆₆ = v·₁p₆₆·(1+a₆₇) | 3,55e-15 à 7,11e-15 sur [A] **et** [B] |
+| 4 — fréquence binomiale vs q₆₅, tolérance 3·SE | 2,89e-5 < 2,24e-4 (H) · 2,66e-5 < 1,59e-4 (F) |
+| 5 — SCR[A] > SCR[B] sur les valeurs brutes | 4 cas / 4, SCR[A] > 0 partout |
+| **6 — translation exacte** de D.5 | 2022 : **433,6670** [A] et **316,3191** [B] · 2023 : **417,5888** et **296,7204** ; écarts 3,4e-13 à 1,6e-12 |
+| 7 — BE inchangés entre 4 % et 1 % | **0** aux trois dates (garanti structurellement) |
+| 8 — cohérence D.2 ↔ D.4 | observé +7,71 vs arrondi seul +7,71 ([A]) ; +5,18 vs +5,19 ([B]) |
+| 8bis — gain empirique = forme fermée, ±2 | écarts −0,008 à +1,085 sur les 8 cas |
+| 9 — décomposition de variance, tolérance 2 % | **0,05 %** [A] · **0,93 %** [B] |
+| 10 — convention de quantile | `type = 1` 282,2519 vs `type = 7` 282,2632, **écart 0,0113** |
+
+⚠️ **Portée de l'oracle 3, à savoir énoncer.** La récurrence est **invariante à un
+décalage COMMUN des deux bornes** : a₆₅ à 16 termes contre a₆₆ à 15 la satisferait aussi.
+Elle teste l'alignement **relatif**, jamais l'horizon **absolu**. C'est l'oracle 2 qui
+pince l'absolu, en reproduisant la VAP moyenne à 2 % du script 04 au bit près — et il le
+fait **sans instancier le taux technique** dans le script 05.
+
+⚠️ **Lecture de l'oracle 10.** L'écart entre conventions de quantile vaut 0,0113, à
+comparer à l'erreur d'échantillonnage du quantile lui-même, **±14,14**. Le choix de
+convention est du bruit à trois ordres de grandeur en dessous de l'incertitude réelle :
+c'est la vraie leçon du contrôle, pas la validation d'un choix.
+
+### Limites CHIFFRÉES (bloc distinct des oracles)
+| Limite | Chiffre |
+|---|---|
+| **Erreur MC du quantile** (bootstrap B = 1000) | sd = **14,14** [A] et **1,90** [B] ⇒ annoncer SCR₂₀₂₂[A] = **282 ± 28** |
+| **Comonotonie H/F**, borne haute sur SCR₂₀₂₂ | cor(a₆₆ʰ, a₆₆ᶠ) +0,0098 → **+0,9995** ; SCR[A] 282,25 → **517,78** (**+83,4 %**) ; SCR[B] −78,77 → −44,32 (+34,46) |
+| **Lecture « point fixe »** du brief (ligne 87) | 243,85 [A] (**−13,6 %**) et −92,36 [B] (+17,2 %) contre la formule VaR retenue |
+
+Contrôles imprimés de la construction comonotone : `cor` passe à +0,9995 (preuve de
+l'appariement — `a66_f[rank(a66_h)]` sans tri préalable permuterait sans apparier et la
+borne sortirait **égale au cas de base**, silencieusement vide), et
+`|mean(a66_f_como) − mean(a66_f)| = 0` (permutation pure ⇒ BE₂₀₂₂ et BOF₂₀₂₂ invariants).
+
+### Fichiers produits par le script 05
+| Fichier | Contenu |
+|---|---|
+| `resultats/05_scr.rds` | `$rdt_4pc` / `$rdt_1pc` → par portefeuille : BOF₂₀₂₂ scalaire, vecteurs BOF₂₀₂₃ et BOF₂₀₂₄ (5000), SCR₂₀₂₂, SCR₂₀₂₃ · `$deces`, `$survivants` (les 4 tirages) · `$n_central`, `$annuites` · `$decomposition`, `$spread`, `$limites` |
+
 ## TODO globaux
 
 - **A.3.i — calibration retenue : `60:102 × 1970-2023`** (cas de base). Justifications en
@@ -741,3 +892,47 @@ taux que 3 % n'est sauvée, le BE de D s'actualisant à `taux_actu_be = 2 %` dep
   locaux en 2022, H comme F) : bruit d'échantillonnage des taux bruts ; la
   quasi-linéarité en échelle log tient (R² de log µ̂ ~ âge = 0,9966 H /
   0,9935 F) — à mentionner comme motivation du lissage Lee-Carter.
+
+### TODO section D — à justifier dans le rapport
+
+- **Le coussin de spread repose sur l'hypothèse « 4 % SANS RISQUE ».** C'est lui, et
+  lui seul, qui rend SCR₂₀₂₂[B] négatif : gain 210,88 contre queue 132,11. Dans la
+  réalité un actif rapportant 4 % porte du **risque de marché**, qui relève d'un module
+  SCR distinct et **hors périmètre** de ce projet. Pont naturel vers une extension Dbis.
+- **Un VaR négatif n'est PAS un besoin de capital négatif.** Dire « SCR effectif = 0 »
+  (plancher Solvabilité II), jamais « le portefeuille [B] libère du capital ».
+- **q₆₆ est constante, elle aussi** — le fit allant jusqu'en 2023, l'année 2 est
+  déterministe côté mortalité au même titre que l'année 1. Le risque systématique
+  n'entre dans SCR₂₀₂₃ que par a₆₇(j). Question de défense la plus facile à poser.
+- **Nature du capital, chiffrée** : [A] = longévité systématique non diversifiable à
+  **94,8 %** ; [B] = **45,6 %** de fluctuation d'échantillonnage, diversifiable. Referme
+  la promesse laissée au TODO C.2.
+- **Comonotonie H/F : le premier levier du résultat.** L'indépendance des trajectoires H
+  et F est un **artefact de simulation** (deux tirages séquentiels du même flux,
+  cor = +0,01), pas un fait modélisé. La borne comonotone donne **+83,4 %** sur
+  SCR₂₀₂₂[A]. À énoncer avec le chiffre, **pas à corriger** — la corrélation H/F n'est
+  pas modélisée dans le projet. Limite jumelle : q₆₅ étant constante, le nombre de décès
+  est indépendant de la réévaluation du BE, donc le modèle ne peut pas produire la
+  dépendance réelle « moins de décès qu'attendu ⟺ améliorations futures meilleures ».
+- **Erreur MC du quantile : ±14,14 sur [A].** Ne commenter aucun écart de SCR inférieur
+  à ~28 sur [A] — en particulier **pas** l'écart SCR₂₀₂₃ − SCR₂₀₂₂ = +3,45. Annoncer
+  « 282 ± 28 », jamais deux décimales.
+- **BE_{t+1} path-wise = révélation totale.** a₆₆(j) et a₆₇(j) sont calculées le long de
+  toute la trajectoire réalisée : l'assureur est supposé apprendre l'intégralité du futur
+  en t+1. Le vrai BE serait E[·|F_{t+1}], de variance strictement plus faible ⇒ notre SCR
+  est **conservateur** sur sa composante systématique, et c'est **asymétrique** avec
+  BE₂₀₂₂ qui est bien une espérance.
+- **Les deux définitions du SCR du brief ne coïncident pas** (lignes 87 et 99) : elles
+  ne s'accordent que si A_t = BE_t + SCR_t, très loin du cas présent. Écart 13,6 % sur
+  [A]. On applique la ligne 99 (instruction explicite), mais il faut le dire, sinon un
+  correcteur partant de la ligne 87 ne retrouve pas nos nombres.
+- **Lecture « état central » de SCR₂₀₂₃** : on projette le SCR sous scénario central, on
+  ne calcule **pas** la distribution des SCR futurs (pas de simulations imbriquées).
+- **Arrondi des survivants centraux** (492,96 → 493 et 496,46 → 496) : effet chiffré en
+  forme fermée par l'oracle 8, +7,71 sur BOF₂₀₂₃ᶜ de [A].
+- **Convention de quantile `type = 1`** (statistique d'ordre = définition du cours) :
+  le choix est immatériel (0,0113) devant l'erreur d'échantillonnage (±14,14).
+- **Tirages de décès communs [A]/[B]** : hypothèse de lecture — deux produits vendus à
+  une même population, pas deux populations distinctes. C'est ce qui rend la comparaison
+  SCR[A]/SCR[B] demandée par le brief exempte de bruit de Monte-Carlo différentiel.
+- **BOF₂₀₂₂ < 0** = conséquence de r = 2 % < t = 3 %, pas un défaut de tarification.
