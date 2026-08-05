@@ -496,7 +496,10 @@ script 03. Deux `readRDS` seulement — `03_diagonales_cohorte.rds` (tarificatio
 
 Convention verrouillée : rentes **à terme échu**, a₆₅ = Σ_{k≥1} vᵏ·ₖp₆₅. Le premier µ
 consommé est µ₆₅(2022) ; il produit ₁p₆₅ = survie jusqu'à 66 ans, qui porte le paiement
-k = 1 versé **fin 2023**. Aucun terme k = 0, ni dans `S` (que `cumprod` ne produit pas) ni
+k = 1 versé **en date 2023** — c'est-à-dire à la clôture de la 1ʳᵉ année d'assurance,
+laquelle court sur l'année civile 2022. Le paiement k tombe **en date 2022+k** ; écrire
+« fin de l'année 2022+k » serait décalé d'un an (ce serait ₖ₊₁p₆₅). Aucun terme k = 0,
+ni dans `S` (que `cumprod` ne produit pas) ni
 dans `v^(1:n)` (qui démarre à v¹).
 
 ### C.1 / C.2 — VAP à 3 %, moyenne et variance sur les 5000 trajectoires

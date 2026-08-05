@@ -52,7 +52,10 @@ probas_survie_trajectoire <- function(M) {
   # M est indexée par ÂGE ; S est indexée par k, et sa ligne 1 vaut ₁p₆₅ =
   # survie jusqu'à 66 ans. Sans ce renommage, S hériterait des noms d'âge de M,
   # FAUX d'un an — et notre règle d'indexation par nom les croirait.
-  #   k  →  âge atteint 65 + k  →  paiement en fin d'année 2022 + k
+  #   k  →  âge atteint 65 + k  →  paiement en DATE 2022 + k
+  # ₁p₆₅ = exp(−µ₆₅(2022)) porte sur l'ANNÉE CIVILE 2022 : le paiement k = 1 tombe
+  # à la clôture de la 1ʳᵉ année d'assurance, donc en date 2023. Écrire « fin de
+  # l'année 2022+k » serait décalé d'un an (ce serait ₖ₊₁p₆₅).
   rownames(S) <- as.character(1:nrow(S))
   attr(S, "age_atteint") <- 65 + 1:nrow(S)   # 66:102 ; le script 05 l'imprimera
   S                                          # en contrôle, il n'indexe pas avec
@@ -320,7 +323,7 @@ vap_rente_naive <- function(mu, taux, n) {
   vap <- 0
   for (k in 1:n) {
     p   <- p * exp(-mu[as.character(64 + k)])   # k = 1 → µ₆₅ ; indexation par NOM
-    vap <- vap + (1 / (1 + taux))^k * p         # paiement en fin d'année 2022+k
+    vap <- vap + (1 / (1 + taux))^k * p         # paiement en DATE 2022+k
   }
   unname(vap)
 }
