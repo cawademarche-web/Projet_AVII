@@ -18,7 +18,7 @@ Numérotation alignée sur le brief officiel : A.1 (MLE), A.2 (discussion), A.3 
 | A.2 (discussion : espérance de vie, âge médian/IQR, expansion-rectangularisation) | `scripts/01_donnees_taux.R` (indicateurs) | Table de survie périodique ℓ_x = exp(−Σ_{k<x} µ_k) ; e_x ≈ Σ_{k≥1} ₖp_x + ½ (curtate + ½) ; quantiles de l'âge au décès par interpolation de ℓ_x | `resultats/01_indicateurs.rds` ; 1947 → 2023 : e₀ 58,87 → 79,45 (H) et 63,96 → 84,23 (F) ; e₆₅ 11,97 → 18,40 (H) et 13,51 → 21,57 (F) ; médiane 67,85 → 82,43 (H) et 72,95 → 87,08 (F) ; IQR 27,94 → 15,79 (H) et 22,88 → 12,70 (F) ; sensibilité troncature 2023 (bornes 100→103) : e₆₅ 18,388 → 18,398 (H), 21,545 → 21,578 (F) ; 4 figures `fig_A2_courbes_survie.png`, `fig_A2_courbe_deces.png`, `fig_A2_esperance_vie.png`, `fig_A2_mediane_iqr.png` | Rédaction de la discussion (expansion / rectangularisation) = rapport |
 | A.3 (Lee-Carter : fit, résidus, projection, bootstrap N=5000) | `scripts/02_leecarter_stmomo.R` | LC Poisson via StMoMo `fit(lc(link="log"), Dxt=, Ext=, ages=, years=)` — expositions **centrales** (validées par le contrôle croisé d'A.1 contre le Mx publié) ; poids w_{x,t} = 0 sur les cellules ETR = 0 ; projection `forecast(h=50, kt.method="mrwd", jumpchoice="fit")` ; bootstrap `type="semiparametric", deathType="observed"` | voir les sous-sections ci-dessous | voir TODO globaux |
 | B (5000 trajectoires κ, IC, comparaison avec bootstrap) | `scripts/03_simulation_kappa.R` | `simulate(LCfit, nsim = 5000, h = 50, kt.method = "mrwd", jumpchoice = "fit")` — α, β, dérive d̂ et volatilité σ̂ **gelés au fit central**, seul l'aléa futur de κ est simulé : **UNE** source d'incertitude contre trois en A.3.vi. Diagonale de cohorte µ_{65+k}(2022+k) extraite par trajectoire | `resultats/03_diagonales_cohorte.rds` (4 matrices 37 × 5000, 0 NA) ; e₆₅ de cohorte sous B : 19,762 [18,823 ; 20,660] (H) et 23,149 [22,123 ; 24,162] (F) ; largeur relative **9,30 % (H)** et **8,81 % (F)** contre 9,83 % / 9,12 % en A.3.vi ⇒ **rapport A.3/B = 1,058 (H) et 1,036 (F)** ; contrôles RWD à h = 50 : sd(κ) = 6,2391 vs σ̂·√50 = 6,3100 (H), 7,1962 vs 7,0641 (F) ; 5 figures `fig_B1_taux_cohorte.png`, `fig_B2_trajectoires_kappa.png`, `fig_B2_ic_taux.png`, `fig_B3_comparaison_ic.png`, `fig_B3_e65_comparaison.png` | voir sous-section « Section B — détail » |
-| C (VAP rentes [A]/[B], primes) | `scripts/04_pricing_vap.R` | — | — | **Sensibilité prudentielle COVID** : rejouer VAP et primes sur la calibration 1970-2019 (β₆₅·d̂ = −0,01995 H / −0,01918 F contre −0,01823 / −0,01727 en cas de base) et chiffrer l'écart ; à propager en D sur le SCR. **Trajectoires déjà disponibles** : `resultats/03_diagonales_cohorte.rds$covid2019`, produites sous nombres aléatoires communs avec le cas de base |
+| C (VAP rentes [A]/[B], primes) | `scripts/04_pricing_vap.R` | **100 % custom, base R, aucun `library()`.** Chaîne µ → ₖp₆₅ → VAP : `probas_survie_trajectoire()` = `apply(M, 2, function(mu) cumprod(exp(-mu)))` — cumprod **colonne par colonne**, force constante par morceaux, même convention qu'A.1 et qu'`esperance_vie_cohorte()` des scripts 02/03 ; `vap_rente(S, taux, n)` = `colSums(v^(1:n) · S[1:n, ])`, **terme échu**, somme de k = 1 à n (n = 37 pour [A], borne ℓ₁₀₂ ; n = 15 pour [B]). Un seul taux dans le script : `taux_tarif = 3 %` | `resultats/04_vap.rds` (3,09 Mo) ; **VAP[A] = 13,7899 (H) et 15,6995 (F)**, VAP[B] = 10,4086 (H) et 11,1011 (F) ; variances 0,061949 / 0,067253 ([A]) et 0,003615 / 0,001602 ([B]) ; primes uniques = ces moyennes (rente annuelle de 1) ; sensibilité 1 % → 5 % : **−33,48 % [A] contre −23,92 % [B]** (H) et −35,96 % contre −24,48 % (F) ; sensibilité COVID à 3 % : **+3,48 % / +2,52 %** sur [A], +1,60 % / +0,89 % sur [B] ; 2 figures `fig_C_hist_vap.png`, `fig_C_sensibilite_taux.png` | voir sous-section « Section C — détail » |
 | D (BOF, SCR 2022/2023, sensibilité) | `scripts/05_solvabilite_scr.R` | — | — | — |
 
 ## Section A.3 — détail (chiffres recopiés de la console du run `n_boot = 5000`)
@@ -486,6 +486,94 @@ variante ne se contente pas d'une dérive plus forte, elle part aussi d'un nivea
 `K` = incertitude de κ **seul** (section B) ; `PU` = *parameter uncertainty* (A.3.vi).
 Les sections C et D ne chargeront **que** `03_diagonales_cohorte.rds`.
 
+## Section C — détail (chiffres recopiés de la console du run de `04_pricing_vap.R`)
+
+### Ce qui distingue C des sections amont
+**Aucun appel à StMoMo, aucun `library()`, aucun `set.seed`.** L'absence de graine est un
+**signal**, pas un oubli : le script ne tire rien, il consomme les 5000 trajectoires du
+script 03. Deux `readRDS` seulement — `03_diagonales_cohorte.rds` (tarification) et
+`03_ic_trajectoires.rds` (**bloc oracle uniquement**, aucune quantité tarifaire n'en dérive).
+
+Convention verrouillée : rentes **à terme échu**, a₆₅ = Σ_{k≥1} vᵏ·ₖp₆₅. Le premier µ
+consommé est µ₆₅(2022) ; il produit ₁p₆₅ = survie jusqu'à 66 ans, qui porte le paiement
+k = 1 versé **fin 2023**. Aucun terme k = 0, ni dans `S` (que `cumprod` ne produit pas) ni
+dans `v^(1:n)` (qui démarre à v¹).
+
+### C.1 / C.2 — VAP à 3 %, moyenne et variance sur les 5000 trajectoires
+| | moyenne | variance | écart-type | quantiles 2,5 / 50 / 97,5 % |
+|---|---|---|---|---|
+| **[A] Hommes** | **13,7899** | 0,061949 | 0,248895 | 13,2877 / 13,7939 / 14,2566 |
+| **[A] Femmes** | **15,6995** | 0,067253 | 0,259332 | 15,1843 / 15,7053 / 16,1995 |
+| [B] Hommes | 10,4086 | 0,003615 | 0,060125 | 10,2838 / 10,4107 / 10,5193 |
+| [B] Femmes | 11,1011 | 0,001602 | 0,040024 | 11,0196 / 11,1018 / 11,1750 |
+
+⚠️ **La variance de [B] s'inverse entre sexes** : 0,003615 (H) > 0,001602 (F), alors que [A]
+ordonne F > H. Ce n'est pas un bug — explication au TODO dédié.
+
+### C.3 — VAP moyenne selon le taux technique
+| taux | [A] H | [A] F | [B] H | [B] F |
+|---|---|---|---|---|
+| 0 % *(contrôle, pas un scénario)* | 19,2622 | 22,6487 | 12,9161 | 13,8542 |
+| 1 % | 17,1143 | 19,8904 | 11,9896 | 12,8355 |
+| 2 % | 15,3124 | 17,6060 | 11,1576 | 11,9221 |
+| **3 % (brief)** | **13,7899** | **15,6995** | **10,4086** | **11,1011** |
+| 4 % | 12,4945 | 14,0964 | 9,7327 | 10,3614 |
+| 5 % | 11,3851 | 12,7388 | 9,1213 | 9,6934 |
+
+**Effet duration** (variation 1 % → 5 %) : **−33,48 % sur [A] contre −23,92 % sur [B]** chez
+les hommes, −35,96 % contre −24,48 % chez les femmes.
+
+### C.4 — primes uniques par le principe d'équivalence, t = 3 %
+Prime = E[VAP] sur les 5000 trajectoires, pour une **rente annuelle de 1** : **13,7899 (H)**
+et **15,6995 (F)** pour [A] ; 10,4086 et 11,1011 pour [B]. L'agrégation portefeuille
+(500 H + 500 F) est une hypothèse de la **section D** et n'est pas faite ici.
+
+### Sensibilité prudentielle COVID (calibration 1970-2019, 3 % seulement)
+| | base | COVID | écart | sd(base) | sd(COVID − base) | rapport |
+|---|---|---|---|---|---|---|
+| [A] Hommes | 13,7899 | 14,2693 | **+3,48 %** | 0,24890 | 0,03646 | **0,15** |
+| [A] Femmes | 15,6995 | 16,0948 | **+2,52 %** | 0,25933 | 0,03725 | **0,14** |
+| [B] Hommes | 10,4086 | 10,5749 | +1,60 % | 0,06012 | 0,01959 | 0,33 |
+| [B] Femmes | 11,1011 | 11,2001 | +0,89 % | 0,04002 | 0,01332 | 0,33 |
+
+L'effondrement de `sd(ΔVAP)` (rapport 0,14 à 0,33) est la **preuve chiffrée de
+l'appariement** par nombres aléatoires communs : l'écart mesuré est un effet de
+**calibration pur**, sans bruit de Monte-Carlo différentiel. La variante prudentielle
+renchérit les rentes, davantage sur la viagère que sur la temporaire.
+
+### Oracles — tous satisfaits
+| Oracle | Résultat |
+|---|---|
+| Alignement `S["1", ] = exp(−µ["65", ])` sur les 5000 colonnes | écart **0** (H et F) — preuve que `cumprod` n'a franchi aucune frontière de colonne |
+| Intégrité `S` ∈ ]0,1], décroissante en k, 0 NA | TRUE / TRUE / 0 ; rownames `"1".."37"`, `attr age_atteint = 66:102` |
+| 1 — VAP[B] < VAP[A] **par trajectoire** | 0 violation / 5000, H et F |
+| 2 — bande recalibrée à terme échu | 13,7899 ∈ [13 ; 14] · 15,6995 ∈ [14 ; 16] |
+| 3a — ancrage inter-scripts à taux nul | `max\|VAP₀ − (e₆₅ − ½)\|` = **0** (tolérance 1e-12) ; e₆₅ reconstitué **19,7622 / 23,1487** contre 19,762 / 23,149 publiés en B.3 |
+| 3b — boucle scalaire naïve vs matriciel | écart max **2,13e-14** sur les 8 cas (2 sexes × 2 produits × taux 0 et 3 %) ; trajectoire 1 : 14,140819 des deux côtés |
+| 4 — monotonie en t sur {0…5} % | TRUE pour les 4 séries |
+| 5 — duration [A] > [B] | −33,48 / −23,92 (H) · −35,96 / −24,48 (F) |
+| 6 — ordre H/F, moyenne **et** quantiles | F > H partout, [A] et [B] |
+| Dernier terme inclus v³⁷·₃₇p₆₅ | 0,00231 (H) = **0,017 %** de VAP[A] · 0,00745 (F) = **0,047 %** |
+
+⚠️ **Portée de l'oracle 3a, à savoir énoncer.** L'écart vaut exactement 0 parce que le script
+03 a produit ses e₆₅ par `apply(diagonale, 2, esperance_vie_cohorte)` sur la matrice même que
+C recharge : mêmes données, même formule, même ordre d'opérations flottantes. L'oracle teste
+donc la **cohérence de convention entre 03 et 04**, et ne pourrait pas détecter une erreur
+d'alignement **partagée**. La preuve d'alignement absolu vient d'ailleurs : du contrôle
+`S["1", ] = exp(−µ["65", ])`, et des e₆₅ de B déjà validés contre A.1. C'est aussi la raison
+d'être de l'oracle 3b, dont la boucle scalaire ne partage **aucune** primitive avec
+`vap_rente()`.
+
+### Fichiers produits par le script 04
+| Fichier | Taille | Contenu |
+|---|---|---|
+| `resultats/04_vap.rds` | 3,09 Mo | `$base` = {vap (4 × 5000), survies (2 × 37 × 5000), primes, sensibilite} · `$covid` = {vap, ecart_relatif} |
+
+Séparation **structurelle** base / covid : la section D charge `$base` et rien d'autre.
+`$base$sensibilite` ne contient que des **moyennes** — aucune VAP par trajectoire à un autre
+taux que 3 % n'est sauvée, le BE de D s'actualisant à `taux_actu_be = 2 %` depuis
+`$base$survies`.
+
 ## TODO globaux
 
 - **A.3.i — calibration retenue : `60:102 × 1970-2023`** (cas de base). Justifications en
@@ -586,6 +674,48 @@ Les sections C et D ne chargeront **que** `03_diagonales_cohorte.rds`.
   que soit le départ, d'où une reproduction à la **tolérance de convergence** (écarts
   4,7e-10 à 1,0e-08), pas au bit près. La correction propre (sauver `fits_grille` dans le
   script 02) a été écartée pour ne pas re-bootstrapper 86 min sur un script déjà validé.
+- **C.2 — ce que la variance des VAP mesure, et surtout ce qu'elle NE mesure PAS.** Les 5000
+  VAP ne diffèrent que par la trajectoire de κ : c'est l'incertitude **systématique de
+  longévité**, **non diversifiable** — 1000 assurés ne la réduisent pas. Le risque
+  **idiosyncratique** des têtes individuelles n'y est pas ; il n'apparaîtra qu'en section D,
+  par la binomiale des décès de l'année 1. Distinction centrale de la Q4 d'examen, et c'est
+  ce risque non diversifiable qui fonde le SCR.
+- **C.2 — l'inversion de la variance sur [B], à expliquer et non à corriger.**
+  var(VAP[B]) = **0,003615 (H) contre 0,001602 (F)**, soit l'ordre **inverse** de [A]
+  (0,061949 H contre 0,067253 F). Explication : la VAP[B] féminine est presque **saturée** —
+  11,1011 sur **11,938**, l'annuité certaine 15 ans à 3 % (Σ_{k=1}^{15} 1,03^{−k}), soit
+  **93,0 %** contre 87,2 % chez les hommes. Les ₖp₆₅ féminins sont si proches de 1 sur
+  15 ans qu'ils laissent peu de prise aux chocs de κ : la sensibilité de exp(−µ) est
+  proportionnelle au niveau de µ, et l'avantage de mortalité féminin **réduit** donc aussi la
+  dispersion. Cohérent avec le rapport d'appariement COVID, **0,33 sur [B] contre 0,14-0,15
+  sur [A]**. Question de défense probable.
+- **C.2 — autres sources d'incertitude** (à lister au rapport, non chiffrées en C) :
+  idiosyncratique (binomiale des décès) ; **modèle** (effet cohorte non capturé, cf. A.3.iv —
+  d'après HR09 un modèle APC projetterait une mortalité plus basse, donc les VAP d'ici sont
+  probablement **sous-estimées**) ; **estimation de la dérive** (cf. B.3 : ni A.3 ni B ne
+  capturent l'incertitude d'échantillonnage temporelle de d̂, facteur 16 à 24 sur sd(d̂)) ;
+  taux d'intérêt (traité en scénarios par C.3, pas en stochastique) ; frais.
+- **C.2/B.3 — ne pas transporter le +39,4 % sur la VAP.** Ce chiffre porte sur sd(κ₂₀₇₃), au
+  seul horizon h = 50. La VAP intègre k = 1…37, dont des horizons courts où √(1+k/n) est bien
+  plus faible (1,05 à k = 5). Aucun chiffre précis sur la VAP ne s'en déduit.
+- **C.3 — le taux technique n'est pas stochastique.** C.3 est une étude de **scénarios
+  déterministes**, pas une modélisation du risque de taux. Le taux 0 % de la grille est un
+  contrôle (oracle 3), pas un scénario tarifaire.
+- **C.4 — principe d'équivalence, convention retenue.** Prime unique = E[VAP] sur les 5000
+  trajectoires, pour une rente annuelle de 1 : c'est l'espérance **sous mortalité
+  stochastique**. Prime **pure** — ni chargement, ni marge de prudence. À opposer au rapport
+  à un chargement pour risque systématique, qui serait un **quantile** et non une moyenne.
+- **C — clôture à ℓ₁₀₂ : lecture correcte du dernier terme.** [A] est bornée à 37 termes. La
+  quantité imprimée v³⁷·₃₇p₆₅ (0,00231 H = 0,017 % de VAP[A] ; 0,00745 F = 0,047 %) est le
+  **dernier terme INCLUS**, **pas** l'erreur de troncature. La queue omise est
+  Σ_{k≥38} vᵏ·ₖp₆₅, que la clôture annule par convention (ℓ₁₀₃ = 0) ; le dernier terme en
+  fournit un **majorant d'ordre de grandeur** — l'espérance de vie résiduelle à 102 ans valant
+  ≈ 1,5-2 ans, la queue pèse grossièrement 1,5 à 2 fois ce terme, donc reste négligeable.
+  **Ne jamais écrire « erreur de troncature = v³⁷·₃₇p₆₅ ».**
+- **C — figure de rapport non produite par le script** : distribution des différences ΔVAP
+  **par trajectoire** entre base et COVID. C'est là que les nombres aléatoires communs se
+  voient (variance de la différence effondrée). Vecteurs disponibles dans
+  `resultats/04_vap.rds$covid$vap`, sans relancer le script 04.
 - **Section D — précision path-wise (à savoir énoncer, rien à coder).** `simulate()` de
   StMoMo produit de **vraies marches aléatoires** (algorithme 2 de HR09 §4.7 :
   κ*_{t+j} = κ_t + j·θ̂ + σ̂·Σᵢ z*ᵢ, z*ᵢ i.i.d.), et non des droites déviées par un tirage
