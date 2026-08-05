@@ -56,6 +56,13 @@
 - 🚩 La boucle D re-simule ses propres trajectoires au lieu de réutiliser celles de B → gaspillage et incohérence entre sections.
 
 ## Réflexe à chaque section, à mettre dans le prompt initial de Claude Code
-- Seed fixé dès la première ligne.
+- **Seed : la règle dépend de ce que fait le script.**
+  - Script qui TIRE → `set.seed(1234)` en ligne 1 : **01, 02, 03 et 05**
+    (en D, la binomiale des décès de l'année 1 est un tirage).
+  - Script qui ne fait que CONSOMMER les RDS amont → pas de seed, mais
+    **absence commentée en en-tête** : **04**. Un `set.seed` y signalerait
+    une re-simulation, donc une violation du contrat d'interface.
+  - 🚩 Script sans seed **et** sans commentaire justifiant l'absence → dire
+    lequel des deux cas s'applique avant d'aller plus loin.
 - Une fonction = un concept actuariel (`vap_rente()`, `simule_kappa()`, `calcule_BE()` — pas un script monolithique).
 - Chaque bloc commenté avec la notation du cours (ex. `# ceci est ₖpₓ`, `# tirage ε ~ N(0,σ²) de la RWD`).

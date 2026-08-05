@@ -54,9 +54,13 @@ sections B, C et D.
 ## Contrat d'interface entre sections
 Chaque script sauve ses objets clés via saveRDS() dans `resultats/` ;
 le script suivant les CHARGE, il ne recalcule jamais.
-En particulier : la section D réutilise les 5000 trajectoires de κ
-simulées en section B (`resultats/trajectoires_kappa.rds`). Interdit de
-re-simuler.
+En particulier : les sections C et D réutilisent les 5000 trajectoires de
+κ simulées en section B, via la diagonale de cohorte µ₆₅₊ₖ(2022+k)
+(`resultats/03_diagonales_cohorte.rds` — 4 matrices 37 × 5000, scénarios
+`base` et `covid2019`). Interdit de re-simuler. Les arrays complets
+`LCsimK_*.rds` (80 Mo pièce) ne sont JAMAIS chargés par C ni par D.
+La section D charge en outre `resultats/04_vap.rds$base` (survies ₖp₆₅ et
+primes) ; la branche `$covid` y est réservée au rapport de la section C.
 - 01 → taux bruts, expositions      · 02 → fit LC, bootstrap
 - 03 → trajectoires κ (5000)        · 04 → VAP et primes par trajectoire
 - 05 → BOF, SCR
