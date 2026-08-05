@@ -307,7 +307,10 @@ mais ne sont pas versionnés : ils sont reproductibles en ~3 min.
 
 ### Sensibilité prudentielle COVID : portée
 La sensibilité 1970-2019 exige un **second jeu de 5 000 trajectoires**, issu du fit
-`60:102 × 1970-2019` (déjà disponible dans la grille de `resultats/02_variantes.rds`).
+`60:102 × 1970-2019` — **fit ré-ajusté dans le script 03** : les objets `fitStMoMo` ne sont
+pas dans `resultats/02_variantes.rds`, qui ne contient que les tableaux de synthèse
+(`grille`, `covid`, `profils`). Voir la sous-section « Section B — détail » pour le
+contrôle de reproduction.
 
 | | Décision | Raison |
 |---|---|---|
@@ -428,12 +431,25 @@ autant que l'aléa de projection lui-même. L'élargissement vaut en forme ferm�
 sexes** : c'est un résultat structurel (rapport horizon / longueur de calibration), pas une
 coïncidence.
 
+⚠️ **Portée exacte de ce +39,4 %, à ne pas outrepasser.** Il s'applique à **sd(κ₂₀₇₃)**,
+c'est-à-dire à l'écart-type de κ **au seul horizon h = 50**. e₆₅ et la VAP ne sont pas des
+fonctions de κ₂₀₇₃ : elles intègrent **tous** les horizons k = 1…37, dont les horizons
+courts, où le facteur √(1 + k/n) est nettement plus faible (à k = 5, il vaut 1,05). L'effet
+sur leurs intervalles serait donc **moindre**, et **différent entre les deux sexes** — la
+neutralité en σ̂ de la forme fermée ne survit pas à l'agrégation sur les horizons, puisque
+la pondération par ₖp₆₅ diffère entre H et F. Même ordre de grandeur, pas égalité : tout
+chiffre précis sur e₆₅ ou la VAP demanderait un calcul dédié, non effectué ici.
+
+**Seconde réserve** : Var[κ_{T+h}] = h·σ̂² + h²·σ̂²/n est l'**approximation** de Lee &
+Carter (1992, annexe B). Elle traite σ̂ comme connue et néglige donc l'incertitude sur σ̂
+lui-même. C'est acceptable ici (n = 53 accroissements), mais à **nommer comme une
+approximation**, pas à présenter comme la variance exacte.
+
 **Conclusion à écrire au rapport** : ni le bootstrap de Poisson ni la simulation de κ seul
 ne capturent l'incertitude d'échantillonnage temporel de la dérive. C'est la **limite
-commune aux deux jeux d'intervalles**, ici quantifiée : les deux sont trop étroits d'environ
-39 % à l'horizon 50 ans. Le faible écart entre A.3 et B (+3 à +6 %) ne dit donc pas que
-l'incertitude d'estimation est négligeable — il dit que **la source d'incertitude
-d'estimation qui compte n'est pas celle que le bootstrap échantillonne**.
+commune aux deux jeux d'intervalles**. Le faible écart entre A.3 et B (+3 à +6 %) ne dit
+donc pas que l'incertitude d'estimation est négligeable — il dit que **la source
+d'incertitude d'estimation qui compte n'est pas celle que le bootstrap échantillonne**.
 
 ### Sensibilité prudentielle COVID (alimente la section C)
 Le fit `60:102 × 1970-2019` est **ré-ajusté** dans le script 03 (absent de
@@ -500,12 +516,14 @@ Les sections C et D ne chargeront **que** `03_diagonales_cohorte.rds`.
   partout, mais l'enveloppe bootstrap traverse zéro aux âges 98-102 (H, jusqu'à 24,8 % des
   réplications à l'âge 101) et 101-102 (F, jusqu'à 7,5 %) : une fraction des réplications
   y projette une mortalité croissante. Sans effet matériel sur la VAP, à documenter.
-- **A.3.v/vi + B — `jumpchoice`, arbitrage GLOBAL.** Verrouillé à `"fit"` dans les trois
-  appels (`forecast` de A.3.v, `simulate(LCboot)` de A.3.vi, et **la section B devra faire
-  de même**). Si A.3 et B partaient d'amorces différentes, la comparaison d'IC demandée en
-  B.3 mélangerait incertitude et décalage de départ, et deviendrait ininterprétable. Écart
-  ajusté/observé à 65 ans en 2023 : −0,72 % (H) mais **+5,73 % (F)** — le choix n'est pas
-  symétrique entre les deux cohortes. À appliquer partout ou nulle part.
+- **A.3.v/vi + B — `jumpchoice`, arbitrage GLOBAL : APPLIQUÉ ET VÉRIFIÉ.** `"fit"` est
+  employé dans les **quatre** appels : `forecast` (A.3.v), `simulate(LCboot)` (A.3.vi), et
+  **les deux couples de `simulate()` de la section B** (cas de base et variante 1970-2019).
+  La comparaison d'IC de B.3 est donc bien à amorce identique — elle ne mélange pas
+  incertitude et décalage de départ. **Ce qui reste ouvert** : la justification de `"fit"`
+  **contre** `"actual"` comme choix global, à documenter au rapport. Écart ajusté/observé à
+  65 ans en 2023 : −0,72 % (H) mais **+5,73 % (F)** — le choix n'est pas symétrique entre
+  les deux cohortes.
 - **A.3.iv — effet de cohorte avéré et chiffré** : écart-type des moyennes de résidus
   standardisées = 2,98 (H) / 2,76 (F) par cohorte, contre 0,14/0,08 par âge et 0,58/0,83
   par année. Lee-Carter n'a aucun terme en t − x. Documenté, **pas corrigé** (le projet ne
