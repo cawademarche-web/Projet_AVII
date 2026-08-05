@@ -17,8 +17,8 @@ Numérotation alignée sur le brief officiel : A.1 (MLE), A.2 (discussion), A.3 
   sur e₆₅ — à mentionner.|
 | A.2 (discussion : espérance de vie, âge médian/IQR, expansion-rectangularisation) | `scripts/01_donnees_taux.R` (indicateurs) | Table de survie périodique ℓ_x = exp(−Σ_{k<x} µ_k) ; e_x ≈ Σ_{k≥1} ₖp_x + ½ (curtate + ½) ; quantiles de l'âge au décès par interpolation de ℓ_x | `resultats/01_indicateurs.rds` ; 1947 → 2023 : e₀ 58,87 → 79,45 (H) et 63,96 → 84,23 (F) ; e₆₅ 11,97 → 18,40 (H) et 13,51 → 21,57 (F) ; médiane 67,85 → 82,43 (H) et 72,95 → 87,08 (F) ; IQR 27,94 → 15,79 (H) et 22,88 → 12,70 (F) ; sensibilité troncature 2023 (bornes 100→103) : e₆₅ 18,388 → 18,398 (H), 21,545 → 21,578 (F) ; 4 figures `fig_A2_courbes_survie.png`, `fig_A2_courbe_deces.png`, `fig_A2_esperance_vie.png`, `fig_A2_mediane_iqr.png` | Rédaction de la discussion (expansion / rectangularisation) = rapport |
 | A.3 (Lee-Carter : fit, résidus, projection, bootstrap N=5000) | `scripts/02_leecarter_stmomo.R` | LC Poisson via StMoMo `fit(lc(link="log"), Dxt=, Ext=, ages=, years=)` — expositions **centrales** (validées par le contrôle croisé d'A.1 contre le Mx publié) ; poids w_{x,t} = 0 sur les cellules ETR = 0 ; projection `forecast(h=50, kt.method="mrwd", jumpchoice="fit")` ; bootstrap `type="semiparametric", deathType="observed"` | voir les sous-sections ci-dessous | voir TODO globaux |
-| B (5000 trajectoires κ, IC, comparaison avec bootstrap) | `scripts/03_simulation_kappa.R` | — | — | Conception arrêtée ci-dessous (« Décisions de conception pour le script 03 ») |
-| C (VAP rentes [A]/[B], primes) | `scripts/04_pricing_vap.R` | — | — | **Sensibilité prudentielle COVID** : rejouer VAP et primes sur la calibration 1970-2019 (β₆₅·d̂ = −0,01995 H / −0,01918 F contre −0,01823 / −0,01727 en cas de base) et chiffrer l'écart ; à propager en D sur le SCR |
+| B (5000 trajectoires κ, IC, comparaison avec bootstrap) | `scripts/03_simulation_kappa.R` | `simulate(LCfit, nsim = 5000, h = 50, kt.method = "mrwd", jumpchoice = "fit")` — α, β, dérive d̂ et volatilité σ̂ **gelés au fit central**, seul l'aléa futur de κ est simulé : **UNE** source d'incertitude contre trois en A.3.vi. Diagonale de cohorte µ_{65+k}(2022+k) extraite par trajectoire | `resultats/03_diagonales_cohorte.rds` (4 matrices 37 × 5000, 0 NA) ; e₆₅ de cohorte sous B : 19,762 [18,823 ; 20,660] (H) et 23,149 [22,123 ; 24,162] (F) ; largeur relative **9,30 % (H)** et **8,81 % (F)** contre 9,83 % / 9,12 % en A.3.vi ⇒ **rapport A.3/B = 1,058 (H) et 1,036 (F)** ; contrôles RWD à h = 50 : sd(κ) = 6,2391 vs σ̂·√50 = 6,3100 (H), 7,1962 vs 7,0641 (F) ; 5 figures `fig_B1_taux_cohorte.png`, `fig_B2_trajectoires_kappa.png`, `fig_B2_ic_taux.png`, `fig_B3_comparaison_ic.png`, `fig_B3_e65_comparaison.png` | voir sous-section « Section B — détail » |
+| C (VAP rentes [A]/[B], primes) | `scripts/04_pricing_vap.R` | — | — | **Sensibilité prudentielle COVID** : rejouer VAP et primes sur la calibration 1970-2019 (β₆₅·d̂ = −0,01995 H / −0,01918 F contre −0,01823 / −0,01727 en cas de base) et chiffrer l'écart ; à propager en D sur le SCR. **Trajectoires déjà disponibles** : `resultats/03_diagonales_cohorte.rds$covid2019`, produites sous nombres aléatoires communs avec le cas de base |
 | D (BOF, SCR 2022/2023, sensibilité) | `scripts/05_solvabilite_scr.R` | — | — | — |
 
 ## Section A.3 — détail (chiffres recopiés de la console du run `n_boot = 5000`)
@@ -331,6 +331,145 @@ années 2022 à 2058), par trajectoire et par sexe.
 - Même contrainte qu'en A.3 : `jumpchoice = "fit"` et `kt.method = "mrwd"`, sinon la
   comparaison B.3 avec les intervalles bootstrap devient ininterprétable.
 
+## Section B — détail (chiffres recopiés de la console du run de `scripts/03_simulation_kappa.R`)
+
+### Ce qui distingue B de A.3.vi
+`simulate(LCfit, ...)` est appelé sur le **fit**, jamais sur un objet bootstrap : le script
+ne contient **aucun** appel à `bootstrap()`. Preuve numérique que α, β et κ sont bien gelés
+jusqu'en 2023 : `max|fitted − fit central| = 0` (H **et** F), et l'étendue de µ₆₅(2022) et
+de µ₆₆(2023) sur les 5000 trajectoires vaut **0** et **0**.
+
+### B.1 — diagonale de cohorte (`fig_B1_taux_cohorte.png`)
+| | 65 ans (2022, ajusté) | 75 ans (2032) | 85 ans (2042) | 101 ans (2058) |
+|---|---|---|---|---|
+| Hommes | 0,014179 | 0,026586 | 0,078172 | 0,510320 |
+| Femmes | 0,007104 | 0,014754 | 0,054585 | 0,448534 |
+
+Taux **observés** d'A.1 sur les deux seuls points historiques de la diagonale :
+µ₆₅(2022) = 0,014177 (H) et 0,007119 (F) ; µ₆₆(2023) = 0,014339 (H) et 0,006991 (F).
+C'est ici que la lecture cohorte devient **matériellement possible** — 37 points, dont 35
+projetés — alors qu'A.3.iii n'en avait que 2. Argument versé au TODO ouvert
+« périodique vs diagonale », qui **reste ouvert**.
+
+### B.2 — contrôles de la marche aléatoire
+κ₂₀₂₃ = −14,7349 (H) et −15,2863 (F) ; d̂ = −0,6023 / −0,6490 ; σ̂ = 0,8924 / 0,9990.
+
+| | h | moyenne obtenue | attendue (κ₂₀₂₃ + h·d̂) | sd obtenue | attendue (σ̂·√h) |
+|---|---|---|---|---|---|
+| H | 10 (2033) | −20,7433 | −20,7583 | 2,7872 | 2,8219 |
+| H | 25 (2048) | −29,6854 | −29,7935 | 4,4481 | 4,4618 |
+| H | 50 (2073) | −44,6048 | −44,8520 | 6,2391 | 6,3100 |
+| F | 10 (2033) | −21,7906 | −21,7762 | 3,1485 | 3,1592 |
+| F | 25 (2048) | −31,5305 | −31,5111 | 5,0874 | 4,9951 |
+| F | 50 (2073) | −47,8787 | −47,7358 | 7,1962 | 7,0641 |
+
+**Le cône s'élargit** : largeur de l'IC 95 % sur ln µ₆₅(t) en 2024 / 2048 / 2073 =
+0,1057 / 0,5283 / 0,7422 (H) et 0,1050 / 0,5262 / 0,7455 (F) — `croissante : TRUE` pour
+les deux sexes. Confirmé visuellement par `fig_B2_trajectoires_kappa.png`, où l'enveloppe
+analytique κ₂₀₂₃ + h·d̂ ± 1,96·σ̂·√h épouse l'éventail simulé.
+
+**Innovations standardisées** z = (Δκ* − d̂)/σ̂, n = 250 000 tirages par sexe :
+moyenne **+0,00554 (t = +2,77)** et **sd = 0,99900** chez les hommes ; **−0,00286
+(t = −1,43)** et **sd = 1,00226** chez les femmes. C'est ce contrôle qui tranche l'écart
+de −44,6048 contre −44,8520 : la spécification du RWD est intacte (c'est sd(z) = 1 qui la
+teste, et il est exact), l'écart sur la moyenne est du bruit de Monte-Carlo — voir TODO.
+
+### B.3 — comparaison avec le bootstrap d'A.3.vi
+| | moyenne | IC 95 % | largeur relative |
+|---|---|---|---|
+| **Hommes — B (κ seul)** | 19,762 | [18,823 ; 20,660] | **9,30 %** |
+| Hommes — A.3.vi (bootstrap) | 19,766 | [18,795 ; 20,738] | 9,83 % |
+| **Femmes — B (κ seul)** | 23,149 | [22,123 ; 24,162] | **8,81 %** |
+| Femmes — A.3.vi (bootstrap) | 23,138 | [22,068 ; 24,179] | 9,12 % |
+
+**Oracle satisfait** : A.3 est strictement plus large, rapport **1,058 (H)** et **1,036 (F)**
+— très loin du facteur 2 qui aurait imposé un diagnostic. Sur les log-taux en 2058, le
+rapport A.3/B vaut 1,06 / 1,06 / 1,05 aux âges 65 / 75 / 85 (H) et 1,05 / 1,05 / 1,04 (F).
+Figures `fig_B3_comparaison_ic.png` (l'enveloppe A.3 contient l'enveloppe B partout, la
+différence n'est qu'une frange) et `fig_B3_e65_comparaison.png`.
+
+### B.3 — POURQUOI l'élargissement est de second ordre (le point central de la section)
+Décomposition de Var(κ₂₀₇₃) sous A.3, à partir des paramètres bootstrap **déjà calculés**
+par le script 02 (aucun re-bootstrap), avec
+κ*_{2023+h} = κ*₂₀₂₃ + h·d̂* + σ̂*·Σz* :
+
+| | amorce | dérive | covariance | projection | sd A.3 | sd B | rapport |
+|---|---|---|---|---|---|---|---|
+| Hommes | 0,052 | 0,142 | 0,146 | **43,477** | 6,619 | 6,310 | **1,049** |
+| Femmes | 0,044 | 0,085 | 0,098 | **53,476** | 7,328 | 7,064 | **1,037** |
+
+Le rapport **prédit analytiquement** (1,049 / 1,037) reproduit le rapport **mesuré** sur
+e₆₅ (1,058 / 1,036) : le mécanisme est compris, pas seulement constaté.
+
+⚠️ **Le canal dominant n'est PAS la dérive** (0,142 + 0,146 = 0,29 sur 43,8, soit 0,7 %)
+mais **σ̂\* > σ̂** : σ̂* moyen = 0,93156 contre σ̂ = 0,89237 (**+4,4 %**) chez les hommes,
+1,03326 contre 0,99902 (**+3,4 %**) chez les femmes. Le bruit d'estimation sur κ̂ ajoute un
+MA(1) qui gonfle sd(Δκ*) — **même mécanisme que le ρ₁(Δκ) négatif** documenté en A.3.i.
+
+**Ce que NI A.3 NI B ne capturent** : `sd(d̂*)` bootstrap = **0,00755** contre
+σ̂/√n = **0,12258** (H, n = 53 accroissements), soit un **facteur 16** ; 0,00583 contre
+0,13723 chez les femmes, **facteur 24**. Le bootstrap de Poisson **conditionne sur le
+chemin κ̂ observé** et ne perturbe que les décès : il ne peut pas produire une autre
+réalisation de la marche aléatoire, donc pas l'incertitude d'échantillonnage **temporelle**
+de la dérive.
+
+Chiffrage de ce qui manque, au sens de Lee & Carter (1992, annexe B), où
+**Var[κ_{T+h}] = h·σ̂² + h²·σ̂²/n** *(évalué sur console à part, pas produit par le script 03
+— il s'agit d'un élément de discussion du rapport, pas d'un résultat de la section)* :
+
+| | h·σ̂² | h²·σ̂²/n | sd totale | sd sous B | élargissement |
+|---|---|---|---|---|---|
+| Hommes (h = 50, n = 53) | 39,816 | 37,562 | 8,7965 | 6,3100 | **+39,4 %** |
+| Femmes (h = 50, n = 53) | 49,902 | 47,077 | 9,8478 | 7,0641 | **+39,4 %** |
+
+Les deux termes sont du **même ordre** : à h = 50 l'incertitude sur la dérive pèse presque
+autant que l'aléa de projection lui-même. L'élargissement vaut en forme fermée
+**√(1 + h/n) = 1,39406**, indépendant de σ̂ — d'où un chiffre **identique pour les deux
+sexes** : c'est un résultat structurel (rapport horizon / longueur de calibration), pas une
+coïncidence.
+
+**Conclusion à écrire au rapport** : ni le bootstrap de Poisson ni la simulation de κ seul
+ne capturent l'incertitude d'échantillonnage temporel de la dérive. C'est la **limite
+commune aux deux jeux d'intervalles**, ici quantifiée : les deux sont trop étroits d'environ
+39 % à l'horizon 50 ans. Le faible écart entre A.3 et B (+3 à +6 %) ne dit donc pas que
+l'incertitude d'estimation est négligeable — il dit que **la source d'incertitude
+d'estimation qui compte n'est pas celle que le bootstrap échantillonne**.
+
+### Sensibilité prudentielle COVID (alimente la section C)
+Le fit `60:102 × 1970-2019` est **ré-ajusté** dans le script 03 (absent de
+`02_variantes.rds`, qui ne contient que les tableaux de synthèse). Contrôle de reproduction
+contre `02_variantes.rds$grille` :
+
+| | d̂ obtenu | σ̂ obtenu | β₆₅ obtenu | écarts au tableau du script 02 |
+|---|---|---|---|---|
+| Hommes | −0,6731840 | 0,7295808 | 0,0296397 | 4,7e-10 / 3,4e-10 / 2,3e-12 |
+| Femmes | −0,7182583 | 0,8662930 | 0,0267074 | 4,0e-11 / 1,0e-08 / 3,0e-11 |
+
+`tous < 1e-6 : TRUE`. Pas de matrice de poids dans ce refit : la fenêtre
+60:102 × 1970-2019 ne contient **aucune** cellule ETR = 0 (vérifié : 0 cellule, ETR minimum
+1,49 chez les hommes et 5,24 chez les femmes), donc w_{x,t} y vaut identiquement 1.
+
+**Test RNG imprimé** : `identical(.Random.seed) = FALSE` — `fit()` **déplace** le flux
+(gnm tire ses valeurs de départ). D'où le `set.seed(1234)` avant **chaque** couple de
+`simulate()`, cas de base inclus.
+
+e₆₅ de cohorte sous la variante : **20,621** (cas de base 19,762) chez les hommes,
+**23,906** (23,149) chez les femmes ; largeurs relatives 9,05 % et 8,67 %.
+Amorce µ₆₅(2022) médiane : 0,014179 → **0,012477** (H) et 0,007104 → **0,006187** (F) — la
+variante ne se contente pas d'une dérive plus forte, elle part aussi d'un niveau plus bas
+(voir TODO).
+
+### Fichiers produits par le script 03
+| Fichier | Taille | Versionné |
+|---|---|---|
+| `resultats/03_diagonales_cohorte.rds` | 5,26 Mo | **oui — interface officielle vers C et D** |
+| `resultats/03_ic_trajectoires.rds` | 3,89 Mo | oui (quantiles, κ, e₆₅ et largeurs des deux scénarios) |
+| `resultats/LCsimK_h_5000.rds` | 80,67 Mo | **non** — `.gitignore` : `resultats/LCsimK_*.rds` |
+| `resultats/LCsimK_f_5000.rds` | 80,69 Mo | **non** |
+
+`K` = incertitude de κ **seul** (section B) ; `PU` = *parameter uncertainty* (A.3.vi).
+Les sections C et D ne chargeront **que** `03_diagonales_cohorte.rds`.
+
 ## TODO globaux
 
 - **A.3.i — calibration retenue : `60:102 × 1970-2023`** (cas de base). Justifications en
@@ -387,6 +526,48 @@ années 2022 à 2058), par trajectoire et par sexe.
   (σ̂(Δκ) = 0,9990 pour les femmes contre 0,8924 pour les hommes). Un ratio proche de 1 est
   donc **cohérent avec les données autrichiennes** — il n'a aucune raison de reproduire le
   cas belge.
+- **B — année 1 sans risque systématique (à énoncer en défense, pour la section D).**
+  Sous `jumpchoice = "fit"`, α, β et κ sont fixés jusqu'en 2023 : les taux 2022-2023 sont
+  **identiques sur les 5000 trajectoires** (vérifié : `max|fitted − fit central| = 0`,
+  étendue de µ₆₅(2022) et µ₆₆(2023) = 0). La mortalité de l'année 1 (2022 → 2023) ne porte
+  donc **que** le risque diversifiable de la binomiale. Le risque de longévité systématique
+  entre dans SCR₂₀₂₂ par la **réévaluation de BE₂₀₂₃**, pas par le nombre de décès.
+- **B.3 — la limite commune aux deux jeux d'intervalles, quantifiée.** Ni le bootstrap de
+  Poisson (qui conditionne sur le chemin κ̂ observé) ni la simulation de κ seul ne
+  capturent l'incertitude d'échantillonnage **temporel** de la dérive :
+  `sd(d̂*) = 0,00755` contre `σ̂/√n = 0,12258` (facteur 16 chez les hommes, 24 chez les
+  femmes). Avec le terme de Lee & Carter (1992, annexe B), les deux jeux d'IC seraient
+  **~39 % plus larges** à h = 50 — élargissement en forme fermée √(1 + h/n), identique
+  pour les deux sexes. À rédiger : le faible écart A.3/B (+3 à +6 %) ne signifie pas que
+  l'incertitude d'estimation est négligeable, mais que **celle qui compte n'est pas celle
+  que le bootstrap échantillonne**.
+- **B.2 — bruit de Monte-Carlo de la graine 1234, assumé et non corrigé.** La moyenne des
+  250 000 innovations standardisées vaut **+0,00554 (t = 2,77)** chez les hommes, d'où
+  l'écart de la moyenne de κ₂₀₇₃ (−44,6048 au lieu de −44,8520). La spécification du RWD
+  est intacte — `sd(z) = 0,99900`, et c'est cette statistique-là qui la teste. Changer de
+  graine pour effacer l'écart serait du **seed-hacking** : on ne le fait pas. Sous nombres
+  aléatoires communs, ce bruit **s'annule** dans la sensibilité COVID de la section C,
+  puisque les deux scénarios consomment le même flux.
+- **B — nombres aléatoires communs base / variante COVID.** Les deux jeux de trajectoires
+  sont **positivement corrélés par construction** : c'est le but (la variance de la
+  *différence* de VAP s'effondre). Corollaire à savoir énoncer : ces 10 000 trajectoires
+  ne forment **pas** un échantillon de taille 10 000 et ne peuvent jamais être fusionnées.
+  L'appariement se fait par **indice de pas**, pas par année civile (base : pas 1 = 2024
+  depuis κ₂₀₂₃ ; variante : pas 1 = 2020 depuis κ₂₀₁₉), soit un décalage de 4 indices ;
+  les sommes cumulées partagent malgré tout ~33 termes sur 36.
+- **B — la variante 1970-2019 projette ses années 2020-2023 au lieu de les ajuster.** Son
+  amorce diffère donc du cas de base : µ₆₅(2022) médian passe de 0,014179 à 0,012477 (H)
+  et de 0,007104 à 0,006187 (F). La sensibilité VAP de la section C mêlera l'effet
+  « dérive plus forte » et l'effet « amorce sans surmortalité COVID ». À **énoncer** au
+  rapport ; **ne pas** corriger par un recalage d'amorce (méthode non demandée).
+- **B — `02_variantes.rds` ne contient pas les fits de la grille**, seulement `grille`,
+  `covid` et `profils`. Le script 03 ré-ajuste donc la variante 1970-2019. Argument de
+  défense à énoncer correctement : ce n'est **pas** que `fit()` ne tirerait rien — gnm tire
+  ses valeurs de départ, et le test `identical(.Random.seed) = FALSE` le prouve — c'est que
+  **l'optimum est unique** à contrainte d'identification près et que l'IRLS y converge quel
+  que soit le départ, d'où une reproduction à la **tolérance de convergence** (écarts
+  4,7e-10 à 1,0e-08), pas au bit près. La correction propre (sauver `fits_grille` dans le
+  script 02) a été écartée pour ne pas re-bootstrapper 86 min sur un script déjà validé.
 - **Section D — précision path-wise (à savoir énoncer, rien à coder).** `simulate()` de
   StMoMo produit de **vraies marches aléatoires** (algorithme 2 de HR09 §4.7 :
   κ*_{t+j} = κ_t + j·θ̂ + σ̂·Σᵢ z*ᵢ, z*ᵢ i.i.d.), et non des droites déviées par un tirage
